@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  # Base image for building Gopher
+  base:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.base
+    image: molmedoz/gopher:base
+    container_name: gopher-base
+
+  # Scenario 1: Unix OS, no system Go installed
+  unix-no-go:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.unix-no-go
+    image: molmedoz/gopher:unix-no-go
+    container_name: gopher-unix-no-go
+    depends_on:
+      - base
+    environment:
+      - GOPHER_DEBUG=1
+    volumes:
+      - gopher-data:/home/gopher/.gopher
+    command: ["/home/gopher/test-gopher.sh"]
+
+  # Scenario 2: Unix OS, Go already installed
+  unix-with-go:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.unix-with-go
+    image: molmedoz/gopher:unix-with-go
+    container_name: gopher-unix-with-go
+    depends_on:
+      - base
+    environment:
+      - GOPHER_DEBUG=1
+    volumes:
+      - gopher-data:/home/gopher/.gopher
+    command: ["/home/gopher/test-gopher.sh"]
+
+  # Scenario 3: Windows, no Go installed
+  windows-no-go:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.windows-no-go
+    image: molmedoz/gopher:windows-no-go
+    container_name: gopher-windows-no-go
+    depends_on:
+      - base
+    environment:
+      - GOPHER_DEBUG=1
+    volumes:
+      - gopher-data-windows:C:\gopher\data
+    command: ["powershell", "-File", "test-gopher.ps1"]
+
+  # Scenario 4: Windows, Go already installed
+  windows-with-go:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.windows-with-go
+    image: molmedoz/gopher:windows-with-go
+    container_name: gopher-windows-with-go
+    depends_on:
+      - base
+    environment:
+      - GOPHER_DEBUG=1
+    volumes:
+      - gopher-data-windows:C:\gopher\data
+    command: ["powershell", "-File", "test-gopher.ps1"]
+
+  # Scenario 5: macOS, no Go installed
+  macos-no-go:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.macos-no-go
+    image: molmedoz/gopher:macos-no-go
+    container_name: gopher-macos-no-go
+    depends_on:
+      - base
+    environment:
+      - GOPHER_DEBUG=1
+    volumes:
+      - gopher-data:/home/gopher/.gopher
+    command: ["/home/gopher/test-gopher.sh"]
+
+  # Scenario 6: macOS, Go already installed
+  macos-with-go:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.macos-with-go
+    image: molmedoz/gopher:macos-with-go
+    container_name: gopher-macos-with-go
+    depends_on:
+      - base
+    environment:
+      - GOPHER_DEBUG=1
+    volumes:
+      - gopher-data:/home/gopher/.gopher
+    command: ["/home/gopher/test-gopher.sh"]
+
+volumes:
+  gopher-data:
+    driver: local
+  gopher-data-windows:
+    driver: local

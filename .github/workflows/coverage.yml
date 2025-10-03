@@ -1,0 +1,105 @@
+name: Coverage
+
+on:
+  push:
+    branches: [ main ]  # Only on main branch to avoid duplicate test runs
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+
+# Cancel previous runs if new commit is pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  coverage:
+    name: Coverage Report
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Run tests with coverage
+        run: |
+          go test -race -coverprofile=coverage.out -covermode=atomic ./...
+          go test -race -coverprofile=coverage-cmd.out -covermode=atomic ./cmd/gopher/...
+
+      - name: Merge coverage files
+        run: |
+          echo "mode: atomic" > coverage-combined.out
+          grep -h -v "^mode:" coverage.out coverage-cmd.out >> coverage-combined.out
+
+      - name: Generate coverage report
+        run: |
+          go tool cover -html=coverage-combined.out -o coverage.html
+          go tool cover -func=coverage-combined.out
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage-combined.out
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: |
+            coverage.html
+            coverage-combined.out
+
+      - name: Comment PR with coverage
+        if: github.event_name == 'pull_request'
+        uses: romeovs/lcov-reporter-action@v0.3.1
+        with:
+          lcov-file: coverage-combined.out
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          delete-old-comments: true
+
+  coverage-badge:
+    name: Coverage Badge
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Run tests with coverage
+        run: |
+          go test -race -coverprofile=coverage.out -covermode=atomic ./...
+          go test -race -coverprofile=coverage-cmd.out -covermode=atomic ./cmd/gopher/...
+
+      - name: Merge coverage files
+        run: |
+          echo "mode: atomic" > coverage-combined.out
+          grep -h -v "^mode:" coverage.out coverage-cmd.out >> coverage-combined.out
+
+      - name: Generate coverage percentage
+        run: |
+          COVERAGE=$(go tool cover -func=coverage-combined.out | grep total | awk '{print $3}' | sed 's/%//')
+          echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
+          echo "Coverage: $COVERAGE%"
+
+      - name: Update coverage badge
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GITHUB_TOKEN }}
+          gistID: ${{ secrets.COVERAGE_GIST_ID }}
+          filename: coverage.json
+          label: Coverage
+          message: ${{ env.COVERAGE }}%
+          color: ${{ env.COVERAGE >= 80 && 'green' || env.COVERAGE >= 60 && 'yellow' || 'red' }}

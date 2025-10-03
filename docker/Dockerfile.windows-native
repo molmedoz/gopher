@@ -1,0 +1,63 @@
+# Windows Container with Go installed
+# This uses a more compatible Windows base image for testing
+
+FROM mcr.microsoft.com/windows/nanoserver:ltsc2022
+
+# Install Go
+RUN powershell -Command \
+    Invoke-WebRequest -Uri "https://go.dev/dl/go1.21.5.windows-amd64.zip" -OutFile "go.zip" && \
+    Expand-Archive -Path "go.zip" -DestinationPath "C:\" && \
+    Remove-Item "go.zip"
+
+# Set environment variables
+ENV GOROOT=C:\go
+ENV PATH=C:\go\bin;%PATH%
+
+# Create gopher directory
+RUN mkdir C:\gopher
+
+# Copy gopher binary (built for Windows)
+COPY build/gopher-windows-amd64.exe C:\gopher\gopher.exe
+
+# Create test script
+RUN echo @echo off > C:\gopher\test-gopher.bat && \
+    echo echo Testing Gopher on Windows with system Go >> C:\gopher\test-gopher.bat && \
+    echo echo ========================================== >> C:\gopher\test-gopher.bat && \
+    echo. >> C:\gopher\test-gopher.bat && \
+    echo echo 1. Testing gopher version: >> C:\gopher\test-gopher.bat && \
+    echo C:\gopher\gopher.exe version >> C:\gopher\test-gopher.bat && \
+    echo. >> C:\gopher\test-gopher.bat && \
+    echo echo 2. Testing system Go detection: >> C:\gopher\test-gopher.bat && \
+    echo C:\gopher\gopher.exe system >> C:\gopher\test-gopher.bat && \
+    echo. >> C:\gopher\test-gopher.bat && \
+    echo echo 3. Testing gopher list: >> C:\gopher\test-gopher.bat && \
+    echo C:\gopher\gopher.exe list >> C:\gopher\test-gopher.bat && \
+    echo. >> C:\gopher\test-gopher.bat && \
+    echo echo 4. Testing current version: >> C:\gopher\test-gopher.bat && \
+    echo C:\gopher\gopher.exe current >> C:\gopher\test-gopher.bat && \
+    echo. >> C:\gopher\test-gopher.bat && \
+    echo echo 5. Testing go command: >> C:\gopher\test-gopher.bat && \
+    echo go version >> C:\gopher\test-gopher.bat && \
+    echo. >> C:\gopher\test-gopher.bat && \
+    echo echo 6. Testing Go installation: >> C:\gopher\test-gopher.bat && \
+    echo C:\gopher\gopher.exe install 1.20.7 >> C:\gopher\test-gopher.bat && \
+    echo. >> C:\gopher\test-gopher.bat && \
+    echo echo 7. Testing version switching: >> C:\gopher\test-gopher.bat && \
+    echo C:\gopher\gopher.exe use 1.20.7 >> C:\gopher\test-gopher.bat && \
+    echo. >> C:\gopher\test-gopher.bat && \
+    echo echo 8. Testing current version: >> C:\gopher\test-gopher.bat && \
+    echo C:\gopher\gopher.exe current >> C:\gopher\test-gopher.bat && \
+    echo. >> C:\gopher\test-gopher.bat && \
+    echo echo 9. Testing switch back to system: >> C:\gopher\test-gopher.bat && \
+    echo C:\gopher\gopher.exe use system >> C:\gopher\test-gopher.bat && \
+    echo. >> C:\gopher\test-gopher.bat && \
+    echo echo 10. Testing JSON output: >> C:\gopher\test-gopher.bat && \
+    echo C:\gopher\gopher.exe list --json >> C:\gopher\test-gopher.bat && \
+    echo. >> C:\gopher\test-gopher.bat && \
+    echo echo All tests completed! >> C:\gopher\test-gopher.bat
+
+# Set working directory
+WORKDIR C:\gopher
+
+# Default command
+CMD ["C:\\gopher\\test-gopher.bat"]

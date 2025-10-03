@@ -1,0 +1,23 @@
+# GitHub Sponsors configuration for Gopher
+# This adds a "Sponsor" button to the repository
+
+# Uncomment when approved for GitHub Sponsors program
+# github: [molmedoz]
+
+# Optional: Add other funding platforms when ready
+# patreon: username
+# open_collective: username
+# ko_fi: username
+# tidelift: npm/package-name
+# community_bridge: project-name
+# liberapay: username
+# issuehunt: username
+# otechie: username
+# lfx_crowdfunding: project-name
+# custom: ['https://example.com', 'https://example2.com']
+
+# Note: The sponsor button will only appear after:
+# 1. You're approved for GitHub Sponsors
+# 2. You uncomment the github: line above
+# 3. You push this file to your repository
+

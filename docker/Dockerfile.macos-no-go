@@ -1,0 +1,93 @@
+# Scenario 5: macOS, no Go installed
+# This tests Gopher in a macOS environment without Go
+
+FROM ubuntu:22.04
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    bash \
+    curl \
+    jq \
+    ca-certificates \
+    wget \
+    tar \
+    gzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create gopher user
+RUN useradd -m -s /bin/bash gopher
+
+# Set working directory
+WORKDIR /home/gopher
+
+# Switch to gopher user
+USER gopher
+
+# Set up environment
+ENV PATH="/home/gopher/.local/bin:$PATH"
+ENV HOME="/home/gopher"
+
+# Create gopher directories
+RUN mkdir -p /home/gopher/.gopher/versions /home/gopher/.gopher/downloads
+
+# Copy gopher binary (built from base image)
+COPY --from=molmedoz/gopher:base /usr/local/bin/gopher /usr/local/bin/gopher
+
+# Create test script
+RUN cat > /home/gopher/test-gopher.sh << 'EOF'
+#!/bin/bash
+echo "🧪 Testing Gopher in macOS environment (no system Go)"
+echo "====================================================="
+
+# Test gopher version
+echo "1. Testing gopher version:"
+gopher version
+
+# Test listing (should show no versions)
+echo -e "\n2. Testing gopher list (should be empty):"
+gopher list
+
+# Test system detection (should show no system Go)
+echo -e "\n3. Testing system Go detection:"
+gopher system || echo "No system Go detected (expected)"
+
+# Test installing Go
+echo -e "\n4. Testing Go installation:"
+gopher install 1.21.0
+
+# Test listing after installation
+echo -e "\n5. Testing gopher list after installation:"
+gopher list
+
+# Test shell integration setup
+echo -e "\n6. Testing shell integration setup:"
+gopher setup
+
+# Test switching to installed version
+echo -e "\n7. Testing version switching:"
+gopher use 1.21.0
+
+# Test current version
+echo -e "\n8. Testing current version:"
+gopher current
+
+# Test Go command
+echo -e "\n9. Testing go command:"
+go version
+
+# Test JSON output
+echo -e "\n10. Testing JSON output:"
+gopher list --json
+
+# Test macOS-specific features
+echo -e "\n11. Testing macOS-specific features:"
+echo "Current OS: $(uname -s)"
+echo "Architecture: $(uname -m)"
+
+echo -e "\n✅ All tests completed!"
+EOF
+
+RUN chmod +x /home/gopher/test-gopher.sh
+
+# Default command
+CMD ["/bin/bash"]

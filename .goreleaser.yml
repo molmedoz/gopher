@@ -1,0 +1,412 @@
+# GoReleaser configuration for Gopher
+# Documentation: https://goreleaser.com
+
+version: 2
+
+# Project metadata
+project_name: gopher
+
+# Before hooks - run before building
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+# Build configuration
+builds:
+  - id: gopher
+    main: ./cmd/gopher
+    binary: gopher
+    
+    # Build for multiple platforms
+    goos:
+      - linux
+      - darwin
+      - windows
+    
+    goarch:
+      - amd64
+      - arm64
+      - arm
+      - "386"
+    
+    goarm:
+      - "6"
+      - "7"
+    
+    # Ignore combinations that don't make sense
+    ignore:
+      - goos: darwin
+        goarch: "386"
+      - goos: darwin
+        goarch: arm
+      - goos: windows
+        goarch: arm
+    
+    # Build flags
+    flags:
+      - -trimpath
+    
+    # Link flags
+    ldflags:
+      - -s -w
+      - -X main.appVersion={{.Version}}
+      - -X main.appCommit={{.Commit}}
+      - -X main.appDate={{.Date}}
+      - -X main.appBuiltBy=goreleaser
+    
+    # Environment variables
+    env:
+      - CGO_ENABLED=0
+
+# Archive customization
+archives:
+  - id: gopher
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    
+    files:
+      - README.md
+      - CHANGELOG.md
+      - QUICK_REFERENCE.md
+      - CONTRIBUTING.md
+      - docs/*.md
+
+# Checksums
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha256
+
+# Snapshots (for testing)
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+# Changelog generation
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+      - '^chore:'
+      - '^style:'
+      - '^build:'
+  groups:
+    - title: '🚀 New Features'
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: '🐛 Bug Fixes'
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: '⚡ Performance Improvements'
+      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: '📚 Documentation'
+      regexp: '^.*?docs(\([[:word:]]+\))??!?:.+$'
+      order: 3
+    - title: '♻️ Refactoring'
+      regexp: '^.*?refactor(\([[:word:]]+\))??!?:.+$'
+      order: 4
+    - title: 'Other Changes'
+      order: 999
+
+# GitHub Release
+release:
+  github:
+    owner: molmedoz
+    name: gopher
+  
+  # Release name template
+  name_template: "Gopher {{.Version}}"
+  
+  # Draft release (false = auto-publish)
+  draft: false
+  
+  # Prerelease detection (auto detects based on tag)
+  prerelease: auto
+  
+  # Release header
+  header: |
+    ## 🎉 Gopher {{.Version}} is here!
+    
+    ### 📥 Installation
+    
+    **macOS/Linux (Homebrew):**
+    ```bash
+    brew tap molmedoz/tap
+    brew install gopher
+    # Or upgrade: brew upgrade gopher
+    ```
+    
+    **Windows (Chocolatey):**
+    ```powershell
+    choco install gopher
+    # Or upgrade: choco upgrade gopher
+    ```
+    
+    **Linux (Snap):**
+    ```bash
+    sudo snap install gopher --classic
+    # Or upgrade: sudo snap refresh gopher
+    ```
+    
+    **Direct Download:**
+    See assets below for your platform.
+    
+    ---
+  
+  # Release footer
+  footer: |
+    ---
+    
+    ### 📖 Documentation
+    
+    - [User Guide](https://molmedoz.github.io/gopher/docs/USER_GUIDE)
+    - [Quick Reference](https://molmedoz.github.io/gopher/QUICK_REFERENCE)
+    - [FAQ](https://molmedoz.github.io/gopher/docs/FAQ)
+    
+    ### 🔗 Links
+    
+    - **Full Changelog**: https://github.com/molmedoz/gopher/compare/{{ .PreviousTag }}...{{ .Tag }}
+    - **Documentation**: https://molmedoz.github.io/gopher/
+    - **Report Issues**: https://github.com/molmedoz/gopher/issues
+    
+    ### 💖 Support
+    
+    If you find Gopher useful, consider [sponsoring its development](https://github.com/sponsors/molmedoz)!
+    
+    ---
+    
+    **Thank you for using Gopher!** 🎉
+
+# Homebrew Tap
+brews:
+  - name: gopher
+    
+    # GitHub repository for tap
+    repository:
+      owner: molmedoz
+      name: homebrew-tap
+      token: "{{ .Env.GITHUB_TOKEN }}"
+    
+    # Git author
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    
+    # Commit message template
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    
+    # Directory inside the tap
+    directory: Formula
+    
+    # Homepage
+    homepage: "https://github.com/molmedoz/gopher"
+    
+    # Description
+    description: "A simple, fast, and dependency-free Go version manager written in Go"
+    
+    # License
+    license: "MIT"
+    
+    # Skip upload if true
+    skip_upload: false
+    
+    # Install script
+    install: |
+      bin.install "gopher"
+      
+      # Install shell completions if available
+      # bash_completion.install "completions/gopher.bash" => "gopher"
+      # zsh_completion.install "completions/gopher.zsh" => "_gopher"
+      # fish_completion.install "completions/gopher.fish"
+    
+    # Test script
+    test: |
+      system "#{bin}/gopher", "version"
+    
+    # Caveats (shown after install)
+    caveats: |
+      Run 'gopher init' to set up gopher for your system.
+      
+      For more information:
+        gopher help
+        https://molmedoz.github.io/gopher/
+
+# Chocolatey packages
+chocolateys:
+  - name: gopher
+    
+    # Package info
+    owners: molmedoz
+    title: Gopher - Go Version Manager
+    authors: molmedoz
+    
+    # URLs
+    project_url: https://github.com/molmedoz/gopher
+    url_template: "https://github.com/molmedoz/gopher/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    icon_url: 'https://raw.githubusercontent.com/molmedoz/gopher/main/build/gopher-icon.png'
+    license_url: https://github.com/molmedoz/gopher/blob/main/LICENSE
+    require_license_acceptance: false
+    project_source_url: https://github.com/molmedoz/gopher
+    docs_url: https://molmedoz.github.io/gopher/
+    bug_tracker_url: https://github.com/molmedoz/gopher/issues
+    
+    # Tags for search
+    tags: "go golang version-manager cli developer-tools version-control"
+    
+    # Summary (max 200 chars)
+    summary: A simple, fast, and dependency-free Go version manager
+    
+    # Description
+    description: |
+      Gopher is a cross-platform Go version manager written in Go that enables you to:
+      
+      * Install and manage multiple Go versions
+      * Switch between Go versions instantly
+      * Manage system and Gopher-installed Go versions
+      * Work on different projects with different Go versions
+      * Zero external dependencies
+      * Cryptographic verification of all downloads
+      * Full JSON support for scripting
+      
+      Perfect for developers who work on multiple Go projects or need to test across Go versions.
+    
+    # Release notes URL
+    release_notes: "https://github.com/molmedoz/gopher/releases/tag/{{ .Tag }}"
+    
+    # API key from environment
+    api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
+    
+    # Source repository
+    source_repo: "https://push.chocolatey.org/"
+    
+    # Skip publish (set to false to publish)
+    skip_publish: false
+
+# Snapcraft
+snapcrafts:
+  - name: gopher
+    
+    # Publish to Snap Store
+    publish: true
+    
+    # Summary (max 79 chars)
+    summary: A simple, fast, and dependency-free Go version manager
+    
+    # Description
+    description: |
+      Gopher is a cross-platform Go version manager that enables you to:
+      
+      * Install and manage multiple Go versions
+      * Switch between versions instantly
+      * Manage system and custom Go installations  
+      * Work on different projects with different Go versions
+      * Zero external dependencies - built with Go standard library only
+      * Cryptographic verification of all downloads
+      * Full JSON support for scripting and automation
+      
+      Perfect for developers working on multiple projects or testing across versions.
+    
+    # Grade (stable, devel, or candidate)
+    grade: stable
+    
+    # Confinement (strict, devmode, or classic)
+    # classic = full system access (needed for version management)
+    confinement: classic
+    
+    # License
+    license: MIT
+    
+    # Base snap
+    base: core22
+    
+    # Apps
+    apps:
+      gopher:
+        command: gopher
+
+# Linux packages (.deb, .rpm, .apk)
+nfpms:
+  - id: gopher-packages
+    
+    # Package name
+    package_name: gopher
+    
+    # Vendor
+    vendor: molmedoz
+    
+    # Homepage
+    homepage: https://github.com/molmedoz/gopher
+    
+    # Maintainer
+    maintainer: molmedoz <your-email@example.com>
+    
+    # Description
+    description: |
+      A simple, fast, and dependency-free Go version manager written in Go.
+      Enables you to install, manage, and switch between multiple Go versions.
+    
+    # License
+    license: MIT
+    
+    # Formats to generate
+    formats:
+      - deb
+      - rpm
+      - apk
+      - archlinux
+    
+    # Priority
+    priority: optional
+    
+    # Section
+    section: utils
+    
+    # Contents to include in package
+    contents:
+      - src: ./LICENSE
+        dst: /usr/share/doc/gopher/LICENSE
+      
+      - src: ./README.md
+        dst: /usr/share/doc/gopher/README.md
+      
+      - src: ./CHANGELOG.md
+        dst: /usr/share/doc/gopher/CHANGELOG.md
+      
+      # Man page (if you create one)
+      # - src: ./gopher.1
+      #   dst: /usr/share/man/man1/gopher.1
+      
+      # Completions (if you create them)
+      # - src: ./completions/gopher.bash
+      #   dst: /usr/share/bash-completion/completions/gopher
+      # - src: ./completions/gopher.zsh
+      #   dst: /usr/share/zsh/site-functions/_gopher
+      # - src: ./completions/gopher.fish
+      #   dst: /usr/share/fish/vendor_completions.d/gopher.fish
+
+# Source archive
+source:
+  enabled: true
+  name_template: '{{ .ProjectName }}-{{ .Version }}-source'
+  format: 'tar.gz'
+
+# Announce (optional)
+# announces:
+#   - provider: twitter
+#     enabled: false
+#     message_template: 'Gopher {{ .Tag }} is out! 🎉 Install with: brew install molmedoz/tap/gopher {{ .ReleaseURL }}'
+
+# Metadata
+metadata:
+  mod_timestamp: '{{ .CommitTimestamp }}'
+

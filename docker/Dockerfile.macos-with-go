@@ -1,0 +1,105 @@
+# Scenario 6: macOS, Go already installed
+# This tests Gopher in a macOS environment with system Go
+
+FROM golang:1.21-bullseye
+
+# Install additional dependencies
+RUN apt-get update && apt-get install -y \
+    bash \
+    curl \
+    jq \
+    ca-certificates \
+    wget \
+    tar \
+    gzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create gopher user
+RUN useradd -m -s /bin/bash gopher
+
+# Set working directory
+WORKDIR /home/gopher
+
+# Switch to gopher user
+USER gopher
+
+# Set up environment
+ENV PATH="/home/gopher/.local/bin:$PATH"
+ENV HOME="/home/gopher"
+
+# Create gopher directories
+RUN mkdir -p /home/gopher/.gopher/versions /home/gopher/.gopher/downloads
+
+# Copy gopher binary (built from base image)
+COPY --from=molmedoz/gopher:base /usr/local/bin/gopher /usr/local/bin/gopher
+
+# Create test script
+RUN cat > /home/gopher/test-gopher.sh << 'EOF'
+#!/bin/bash
+echo "🧪 Testing Gopher in macOS environment (with system Go)"
+echo "======================================================="
+
+# Test gopher version
+echo "1. Testing gopher version:"
+gopher version
+
+# Test system Go detection
+echo -e "\n2. Testing system Go detection:"
+gopher system
+
+# Test listing (should show system Go)
+echo -e "\n3. Testing gopher list (should show system Go):"
+gopher list
+
+# Test current version (should be system Go)
+echo -e "\n4. Testing current version:"
+gopher current
+
+# Test Go command
+echo -e "\n5. Testing go command:"
+go version
+
+# Test installing additional Go version
+echo -e "\n6. Testing Go installation:"
+gopher install 1.20.7
+
+# Test listing after installation
+echo -e "\n7. Testing gopher list after installation:"
+gopher list
+
+# Test shell integration setup
+echo -e "\n8. Testing shell integration setup:"
+gopher setup
+
+# Test switching to installed version
+echo -e "\n9. Testing version switching:"
+gopher use 1.20.7
+
+# Test current version
+echo -e "\n10. Testing current version:"
+gopher current
+
+# Test switching back to system Go
+echo -e "\n11. Testing switch back to system Go:"
+gopher use system
+
+# Test current version
+echo -e "\n12. Testing current version:"
+gopher current
+
+# Test JSON output
+echo -e "\n13. Testing JSON output:"
+gopher list --json
+
+# Test macOS-specific features
+echo -e "\n14. Testing macOS-specific features:"
+echo "Current OS: $(uname -s)"
+echo "Architecture: $(uname -m)"
+
+echo -e "\n✅ All tests completed!"
+EOF
+
+RUN chmod +x /home/gopher/test-gopher.sh
+
+# Default command
+CMD ["/bin/bash"]

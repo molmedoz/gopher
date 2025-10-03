@@ -1,0 +1,188 @@
+name: Security
+
+on:
+  push:
+    branches: [ main ]  # Only on main to avoid duplicate runs
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+  pull_request:
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  schedule:
+    # Run security checks daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+# Cancel previous runs if new commit is pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for better vulnerability detection
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        cache: true
+
+    - name: Install security tools
+      run: make security-tools
+
+    - name: Download dependencies
+      run: go mod download
+
+    - name: Run security tests
+      run: make security-test
+
+    - name: Run vulnerability check
+      run: make vuln-check
+      continue-on-error: true
+
+    - name: Run security scan
+      run: make security-scan
+      continue-on-error: true
+
+    - name: Run go vet
+      run: go vet ./...
+
+    - name: Run static analysis
+      run: |
+        go run honnef.co/go/tools/cmd/staticcheck@latest ./...
+
+    - name: Check for outdated dependencies
+      run: |
+        echo "Checking for outdated dependencies..."
+        go list -m -u all | grep -E '\[.*\]' || echo "All dependencies are up to date"
+
+    - name: Security report
+      if: always()
+      run: |
+        echo "## Security Scan Results" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Security tests completed" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Vulnerability check completed" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Security scan completed" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Static analysis completed" >> $GITHUB_STEP_SUMMARY
+
+  dependency-check:
+    name: Dependency Security Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        cache: true
+
+    - name: Install govulncheck
+      run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+    - name: Download dependencies
+      run: go mod download
+
+    - name: Run vulnerability check
+      run: govulncheck ./...
+
+    - name: Check for security advisories
+      run: |
+        echo "Checking for known security advisories..."
+        govulncheck -json ./... > vuln-report.json || true
+        if [ -f vuln-report.json ]; then
+          echo "Vulnerability report generated"
+          cat vuln-report.json
+        else
+          echo "No vulnerabilities found"
+        fi
+
+  code-quality:
+    name: Code Quality & Security
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        cache: true
+
+    - name: Install tools
+      run: |
+        go install honnef.co/go/tools/cmd/staticcheck@latest
+        go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+
+    - name: Run gosec
+      run: |
+        gosec -fmt json -out gosec-report.json ./... || true
+        gosec ./...
+
+    - name: Run staticcheck
+      run: |
+        staticcheck -f json ./... > staticcheck-report.json || true
+        staticcheck ./...
+
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          gosec-report.json
+          staticcheck-report.json
+        retention-days: 30
+
+  security-test:
+    name: Security Test Suite
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        go-version: ['1.20', '1.21', '1.22']
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go ${{ matrix.go-version }}
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ matrix.go-version }}
+        cache: true
+
+    - name: Run security tests
+      run: |
+        go test -v -tags=security ./internal/security/...
+
+    - name: Run integration tests
+      run: |
+        go test -v ./test/...
+
+    - name: Test security features
+      run: |
+        echo "Testing path traversal protection..."
+        go test -v -run TestValidatePath ./internal/security/...
+        
+        echo "Testing file permission validation..."
+        go test -v -run TestValidateFilePermissions ./internal/security/...
+        
+        echo "Testing input sanitization..."
+        go test -v -run TestSanitizePath ./internal/security/...

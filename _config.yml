@@ -1,0 +1,71 @@
+# GitHub Pages Configuration for Gopher Documentation
+
+# Site settings
+title: Gopher Documentation
+description: A simple, fast, and dependency-free Go version manager
+baseurl: "/gopher"
+url: "https://molmedoz.github.io"
+
+# Theme
+theme: jekyll-theme-cayman
+# Alternative themes:
+# - jekyll-theme-minimal
+# - jekyll-theme-slate
+# - jekyll-theme-architect
+# - jekyll-theme-hacker
+
+# Markdown
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+# Collections
+collections:
+  docs:
+    output: true
+    permalink: /docs/:path/
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+      type: "docs"
+    values:
+      layout: "default"
+
+# Exclude from processing
+exclude:
+  - vendor
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - build
+  - docker
+  - .git
+  - .github
+
+# Include
+include:
+  - README.md
+  - docs
+  - QUICK_REFERENCE.md
+  - DOCUMENTATION_INDEX.md
+  - CONTRIBUTING.md
+
+# Plugins
+plugins:
+  - jekyll-relative-links
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+# SEO
+author: molmedoz
+social:
+  name: Gopher
+  links:
+    - https://github.com/molmedoz/gopher
+
+# Google Analytics (optional)
+# google_analytics: UA-XXXXXXXX-X
+

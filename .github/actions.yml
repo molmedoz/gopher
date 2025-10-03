@@ -1,0 +1,26 @@
+# GitHub Actions configuration
+# This file configures common settings for all workflows
+
+# Enable GitHub Actions for this repository
+# This is automatically enabled when you create .github/workflows/
+
+# Common environment variables for all workflows
+env:
+  GO_VERSION: "1.21"
+  DOCKER_REGISTRY: "molmedoz"
+  DOCKER_IMAGE: "gopher"
+
+# Common settings for all workflows
+defaults:
+  run:
+    shell: bash
+    working-directory: .
+
+# Common permissions for all workflows
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+  pull-requests: write
+  issues: write
+  checks: write

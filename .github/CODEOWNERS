@@ -1,0 +1,22 @@
+# Global owners
+* @molmedoz
+
+# Documentation
+/docs/ @molmedoz
+*.md @molmedoz
+
+# GitHub Actions workflows
+/.github/ @molmedoz
+
+# Docker files
+/docker/ @molmedoz
+Dockerfile* @molmedoz
+
+# Go source code
+*.go @molmedoz
+/go.mod @molmedoz
+/go.sum @molmedoz
+
+# Configuration files
+Makefile @molmedoz
+wails.json @molmedoz

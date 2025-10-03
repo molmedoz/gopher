@@ -1,0 +1,53 @@
+# Base Dockerfile for Gopher testing
+# This provides a clean environment with Go installed for building Gopher
+
+FROM golang:1.21-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache \
+    git \
+    make \
+    bash \
+    curl \
+    jq
+
+# Set working directory
+WORKDIR /app
+
+# Copy gopher source
+COPY . .
+
+# Build gopher
+RUN go build -o gopher ./cmd/gopher
+
+# Create final image
+FROM alpine:latest
+
+# Install runtime dependencies
+RUN apk add --no-cache \
+    bash \
+    curl \
+    jq \
+    ca-certificates
+
+# Copy gopher binary
+COPY --from=builder /app/gopher /usr/local/bin/gopher
+
+# Create gopher user
+RUN adduser -D -s /bin/bash gopher
+
+# Set working directory
+WORKDIR /home/gopher
+
+# Switch to gopher user
+USER gopher
+
+# Set up environment
+ENV PATH="/home/gopher/.local/bin:$PATH"
+ENV HOME="/home/gopher"
+
+# Create gopher directories
+RUN mkdir -p /home/gopher/.gopher/versions /home/gopher/.gopher/downloads
+
+# Default command
+CMD ["/bin/bash"]
