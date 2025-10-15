@@ -222,6 +222,11 @@ func main() {
 	// Parse flags first
 	flag.Parse()
 
+	// Mark unused flags as intentionally available for future use
+	_ = quiet
+	_ = q
+	_ = v
+
 	// Check for help flag
 	if *helpFlag {
 		showHelp()
@@ -604,7 +609,8 @@ func listRemoteInteractive(versions []downloader.VersionInfo, totalPages int) er
 }
 
 // listRemoteInteractiveString provides interactive pagination for string-based version lists
-func listRemoteInteractiveString(versions []string, totalPages int) error {
+// Currently unused but kept for potential future use
+func listRemoteInteractiveString(versions []string, totalPages int) error { //nolint:unused
 	currentPage := *page
 	scanner := bufio.NewScanner(os.Stdin)
 
@@ -797,7 +803,8 @@ func listInstalledInteractive(versions []inruntime.Version, totalPages int) erro
 
 // filterVersions filters versions based on the provided filter text
 // filterVersionsString filters a list of version strings based on a filter string
-func filterVersionsString(versions []string, filter string) []string {
+// Currently unused but kept for potential future use
+func filterVersionsString(versions []string, filter string) []string { //nolint:unused
 	if filter == "" {
 		return versions
 	}
@@ -835,7 +842,8 @@ func filterVersions(versions []downloader.VersionInfo, filter string) []download
 }
 
 // filterStableVersionsString filters out non-stable versions from a list of version strings
-func filterStableVersionsString(versions []string) []string {
+// Currently unused but kept for potential future use
+func filterStableVersionsString(versions []string) []string { //nolint:unused
 	var stable []string
 
 	for _, v := range versions {
@@ -1301,7 +1309,8 @@ func outputJSON(data any) error {
 }
 
 // setupShellIntegration sets up shell integration for persistent Go version switching
-func setupShellIntegration(manager *inruntime.Manager) error {
+// Currently unused but kept for potential future use
+func setupShellIntegration(manager *inruntime.Manager) error { //nolint:unused
 	// Create the gopher initialization script
 	initScript, err := createGopherInitScript(manager)
 	if err != nil {

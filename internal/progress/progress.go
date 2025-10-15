@@ -88,7 +88,9 @@ func (pb *ProgressBar) display() {
 	pb.terminal.clearAndPrint(line)
 }
 
-func min(a, b int) int {
+// min returns the minimum of two integers
+// Currently unused but kept for potential future use
+func min(a, b int) int { //nolint:unused
 	if a < b {
 		return a
 	}

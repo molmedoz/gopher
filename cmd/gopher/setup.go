@@ -50,7 +50,8 @@ func runInteractiveSetup(manager *inruntime.Manager) error {
 }
 
 // runWindowsSetup handles Windows-specific setup
-func runWindowsSetup(manager *inruntime.Manager) error {
+// Currently unused but kept for potential future use
+func runWindowsSetup(manager *inruntime.Manager) error { //nolint:unused
 	fmt.Println("🪟 Windows Setup")
 	fmt.Println("================")
 
@@ -178,7 +179,8 @@ func runWindowsSetup(manager *inruntime.Manager) error {
 }
 
 // runMacOSSetup handles macOS-specific setup
-func runMacOSSetup(manager *inruntime.Manager) error {
+// Currently unused but kept for potential future use
+func runMacOSSetup(manager *inruntime.Manager) error { //nolint:unused
 	fmt.Println("🍎 macOS Setup")
 	fmt.Println("==============")
 
@@ -234,7 +236,8 @@ func runMacOSSetup(manager *inruntime.Manager) error {
 }
 
 // runLinuxSetup handles Linux-specific setup
-func runLinuxSetup(manager *inruntime.Manager) error {
+// Currently unused but kept for potential future use
+func runLinuxSetup(manager *inruntime.Manager) error { //nolint:unused
 	fmt.Println("🐧 Linux Setup")
 	fmt.Println("==============")
 
@@ -294,7 +297,8 @@ func runLinuxSetup(manager *inruntime.Manager) error {
 }
 
 // runGenericSetup handles generic setup for unsupported platforms
-func runGenericSetup(manager *inruntime.Manager) error {
+// Currently unused but kept for potential future use
+func runGenericSetup(manager *inruntime.Manager) error { //nolint:unused
 	fmt.Println("🔧 Generic Setup")
 	fmt.Println("================")
 
