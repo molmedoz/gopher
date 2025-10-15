@@ -1,43 +1,26 @@
 version: 2
 updates:
-  # Enable version updates for Go modules
+  # Go modules - monthly check (security.yml already runs daily vulnerability scans)
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "02:00"
-    open-pull-requests-limit: 10
-    reviewers:
-      - "molmedoz"
-    assignees:
-      - "molmedoz"
+      interval: "monthly"
+    open-pull-requests-limit: 3
     commit-message:
-      prefix: "chore"
-      include: "scope"
+      prefix: "chore(deps)"
     labels:
       - "dependencies"
-      - "go"
     ignore:
-      # Ignore major version updates for now
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
 
-  # Enable version updates for GitHub Actions
+  # GitHub Actions - monthly security updates
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "02:00"
-    open-pull-requests-limit: 5
-    reviewers:
-      - "molmedoz"
-    assignees:
-      - "molmedoz"
+      interval: "monthly"
+    open-pull-requests-limit: 3
     commit-message:
-      prefix: "chore"
-      include: "scope"
+      prefix: "chore(deps)"
     labels:
       - "dependencies"
-      - "github-actions"

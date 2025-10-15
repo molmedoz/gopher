@@ -2,14 +2,12 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
     paths-ignore:
       - '**.md'
       - 'docs/**'
       - 'LICENSE'
       - '.github/FUNDING.yml'
   pull_request:
-    branches: [ main, develop ]
     paths-ignore:
       - '**.md'
       - 'docs/**'
@@ -65,7 +63,7 @@ jobs:
           args: --timeout=5m
 
   test:
-    name: Test
+    name: Test with Coverage
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -76,11 +74,19 @@ jobs:
         with:
           go-version: '1.21'
 
-      - name: Run tests
-        run: go test -v -race -coverprofile=coverage.out ./...
+      - name: Run tests with coverage
+        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
 
-      - name: Generate coverage report
+      - name: Generate coverage report (HTML)
         run: go tool cover -html=coverage.out -o coverage.html
+
+      - name: Show coverage summary
+        run: |
+          echo "## 📊 Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          go tool cover -func=coverage.out >> $GITHUB_STEP_SUMMARY
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}')
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Total Coverage: $COVERAGE**" >> $GITHUB_STEP_SUMMARY
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -90,18 +96,37 @@ jobs:
           name: codecov-umbrella
           fail_ci_if_error: false
 
-      - name: Upload coverage report
+      - name: Upload coverage HTML report
         uses: actions/upload-artifact@v3
         with:
-          name: coverage-report
+          name: coverage-report-${{ github.sha }}
           path: coverage.html
+          retention-days: 30
+
+      - name: Comment coverage on PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: coverage
+          message: |
+            ## 📊 Test Coverage Report
+            
+            Coverage report generated! Download the HTML report from the artifacts section.
+            
+            <details>
+            <summary>Click to see coverage details</summary>
+            
+            ```
+            $(go tool cover -func=coverage.out | tail -20)
+            ```
+            </details>
 
   build:
-    name: Build
+    name: Build (Go ${{ matrix.go-version }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: ['1.21', '1.22', '1.23']
+        go-version: ['1.21', '1.22', '1.23', '1.24']
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -114,10 +139,15 @@ jobs:
       - name: Build
         run: go build -v ./cmd/gopher
 
-      - name: Test build
+      - name: Verify build works
         run: |
           ./gopher version
           ./gopher help
+          
+      - name: Report build success
+        run: |
+          echo "## ✅ Build Success (Go ${{ matrix.go-version }})" >> $GITHUB_STEP_SUMMARY
+          echo "Binary built and verified successfully" >> $GITHUB_STEP_SUMMARY
 
   build-cross-platform:
     name: Build Cross-Platform
