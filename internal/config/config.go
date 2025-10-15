@@ -148,12 +148,12 @@ func Load(configPath string) (*Config, error) {
 		if err := config.Save(configPath); err != nil {
 			return nil, fmt.Errorf("failed to create default config: %w", err)
 		}
-		
+
 		// Ensure all required directories exist (CRITICAL for Windows!)
 		if err := config.EnsureDirectories(); err != nil {
 			return nil, fmt.Errorf("failed to create required directories: %w", err)
 		}
-		
+
 		return config, nil
 	}
 

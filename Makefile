@@ -164,6 +164,9 @@ fmt: ## Format Go code
 	@$(GOFMT) ./...
 	@echo "$(GREEN)✅ Go code formatted$(NC)"
 
+.PHONY: format
+format: fmt ## Alias for fmt (Format Go code)
+
 .PHONY: lint
 lint: ## Run linter
 	@echo "$(BLUE)Running linter...$(NC)"

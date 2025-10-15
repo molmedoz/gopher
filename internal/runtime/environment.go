@@ -610,4 +610,3 @@ After fixing, verify with: where go
 
 	return nil
 }
-

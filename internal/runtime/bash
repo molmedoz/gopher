@@ -193,3 +193,8 @@ fi
 if [ -f "/tmp/profile" ]; then
     source "/tmp/profile"
 fi
+
+# Gopher shell integration
+if [ -f "/tmp/profile" ]; then
+    source "/tmp/profile"
+fi
