@@ -6,8 +6,8 @@ import (
 )
 
 func TestRecoverer(t *testing.T) {
-	logger := NewErrorLogger(LogLevelInfo)
-	recoverer := NewRecoverer(logger)
+	// Use nil logger in tests to avoid error output in CI
+	recoverer := NewRecoverer(nil)
 	if recoverer == nil {
 		t.Fatal("Expected recoverer to be created")
 	}
@@ -24,8 +24,8 @@ func TestRecoverer(t *testing.T) {
 
 // TestRecoverer_Comprehensive tests the recoverer comprehensively
 func TestRecoverer_Comprehensive(t *testing.T) {
-	logger := NewErrorLogger(LogLevelInfo)
-	recoverer := NewRecoverer(logger)
+	// Use nil logger in tests to avoid error output in CI
+	recoverer := NewRecoverer(nil)
 
 	if recoverer == nil {
 		t.Fatal("Expected recoverer to be created")
