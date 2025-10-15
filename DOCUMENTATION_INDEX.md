@@ -69,7 +69,7 @@ This index helps you find the right documentation quickly. All docs are organize
 | **[docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md)** | Development setup, architecture | Developers |
 | **[docs/API_REFERENCE.md](docs/API_REFERENCE.md)** | API documentation | Developers |
 | **[docs/TEST_STRATEGY.md](docs/TEST_STRATEGY.md)** | Testing approach and best practices | Test writers |
-| **[docs/REFACTORING_SUMMARY.md](docs/REFACTORING_SUMMARY.md)** | Recent architectural changes | Developers |
+| **[docs/MAKEFILE_GUIDE.md](docs/MAKEFILE_GUIDE.md)** | Makefile commands and local CI | Developers |
 
 ---
 
@@ -82,7 +82,8 @@ This index helps you find the right documentation quickly. All docs are organize
 | **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)** | Complete feature reference | Need detailed info |
 | **[docs/API_REFERENCE.md](docs/API_REFERENCE.md)** | API specifications | Integrating Gopher |
 | **[docs/EXAMPLES.md](docs/EXAMPLES.md)** | Code examples and use cases | Learning by example |
-| **[docs/LOGGING.md](docs/LOGGING.md)** | Logging system documentation | Debugging, troubleshooting |
+| **[docs/PROGRESS_SYSTEM.md](docs/PROGRESS_SYSTEM.md)** | Progress indicators documentation | Understanding UI feedback |
+| **[docs/E2E_TESTING.md](docs/E2E_TESTING.md)** | End-to-end testing guide | Writing E2E tests |
 
 ---
 
@@ -200,8 +201,9 @@ gopher/
     │   ├── DEVELOPER_GUIDE.md     # Development guide
     │   ├── API_REFERENCE.md       # API documentation
     │   ├── TEST_STRATEGY.md       # Testing architecture
-    │   ├── REFACTORING_SUMMARY.md # Recent changes
-    │   └── LOGGING.md             # Logging system
+    │   ├── MAKEFILE_GUIDE.md      # Makefile and local CI
+    │   ├── PROGRESS_SYSTEM.md     # Progress indicators
+    │   └── E2E_TESTING.md         # End-to-end testing
     │
     ├── 🛠️ Maintainer Documentation (NEW!)
     │   ├── DOCUMENTATION_ORGANIZATION.md   # Doc structure guide
@@ -305,9 +307,10 @@ This duplication is **intentional** to serve different audiences and contexts!
 ### 🆕 New User
 ```
 1. README.md (overview)
-2. Platform setup (Windows/macOS/Linux specific)
-3. docs/EXAMPLES.md (learn by example)
-4. docs/USER_GUIDE.md (when you need details)
+2. QUICK_REFERENCE.md (command cheat sheet)
+3. Platform setup (Windows/macOS/Linux specific)
+4. docs/EXAMPLES.md (learn by example)
+5. docs/USER_GUIDE.md (when you need details)
 ```
 
 ### 🪟 Windows User
@@ -330,9 +333,10 @@ This duplication is **intentional** to serve different audiences and contexts!
 ```
 1. CONTRIBUTING.md (contribution guidelines)
 2. docs/DEVELOPER_GUIDE.md (development setup)
-3. docs/API_REFERENCE.md (API specs)
-4. docs/TEST_STRATEGY.md (testing approach)
-5. docs/REFACTORING_SUMMARY.md (recent changes)
+3. docs/MAKEFILE_GUIDE.md (local CI and Makefile)
+4. docs/API_REFERENCE.md (API specs)
+5. docs/TEST_STRATEGY.md (testing approach)
+6. docs/E2E_TESTING.md (end-to-end testing)
 ```
 
 ### 🔧 DevOps / CI/CD
@@ -437,8 +441,8 @@ We welcome documentation improvements! See [CONTRIBUTING.md](CONTRIBUTING.md) fo
 
 ---
 
-**Last Updated:** 2025-10-13  
-**Version:** 1.1  
+**Last Updated:** 2025-10-15  
+**Version:** 1.0  
 **Maintainer:** Gopher Development Team
 
 

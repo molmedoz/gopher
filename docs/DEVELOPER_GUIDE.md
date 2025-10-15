@@ -617,7 +617,9 @@ This developer guide provides comprehensive information for contributing to Goph
 
 - **[API Reference](API_REFERENCE.md)** - Complete API documentation
 - **[Test Strategy](TEST_STRATEGY.md)** - Testing approach and best practices
-- **[Refactoring Summary](REFACTORING_SUMMARY.md)** - Recent architectural changes
+- **[Makefile Guide](MAKEFILE_GUIDE.md)** - Local CI and development commands
+- **[E2E Testing](E2E_TESTING.md)** - End-to-end testing guide
+- **[Progress System](PROGRESS_SYSTEM.md)** - Progress indicators documentation
 - **[Contributing](../CONTRIBUTING.md)** - Contribution guidelines
 - **[Roadmap](ROADMAP.md)** - Future features and enhancements
 

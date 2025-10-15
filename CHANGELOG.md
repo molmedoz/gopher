@@ -43,17 +43,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - JSON output support for all commands
   - Verbose and quiet modes
   - Interactive setup wizard (`gopher init`)
+  - Makefile-based local CI (`make ci`, `make test`, `make lint`)
+  - Shell-based E2E tests (18 scenarios across platforms)
   - Comprehensive documentation suite
   - Detailed roadmap with prioritized features
   
+- **Maintenance Commands**
+  - `gopher clean` - Remove download cache to free disk space
+  - `gopher purge` - Complete removal of all Gopher data with confirmation
+  
 ### Technical Improvements
 - **Dependencies**: Uses `golang.org/x/term` for enhanced terminal support
-- **Testing**: 11/11 test suites passing with 36% code coverage
+- **Testing**: 50+ unit tests with 35% coverage + 18 E2E test scenarios
+- **CI/CD**: GitHub Actions workflows for lint, test, build, security, coverage
 - **Architecture**: Modular design with reusable components
+- **Thread Safety**: Mutex-protected concurrent operations in alias manager
 - **Cross-platform**: Platform-specific optimizations for Windows, macOS, and Linux
 
 ### Commands Available
-- `gopher list` - List installed Go versions (including system)
+- `gopher list` - List installed Go versions (with aliases shown inline)
 - `gopher list-remote` - List available Go versions with pagination
 - `gopher install <version>` - Install a Go version
 - `gopher uninstall <version>` - Uninstall a Go version
@@ -61,17 +69,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `gopher use system` - Switch to system Go
 - `gopher current` - Show current Go version
 - `gopher system` - Show system Go information
-- `gopher alias` - Manage version aliases (create, list, remove, show, import, export)
+- `gopher clean` - Remove download cache to free disk space
+- `gopher purge` - Complete removal with confirmation
+- `gopher alias` - Manage version aliases (create, list, remove, show, import, export, suggest, bulk)
 - `gopher init` - Interactive setup wizard
 - `gopher setup` - Shell integration setup
 - `gopher status` - Show persistence and shell integration status
-- `gopher env` - Environment configuration management
+- `gopher env` - Environment configuration management (list, show, set, reset)
 - `gopher debug` - Debug information for troubleshooting
 - `gopher version` - Show gopher version
 
 ### User Experience Improvements
 - Visual progress bars for downloads (auto-sized to terminal width)
-- Animated spinners for long operations
+- Animated spinners for long operations (extraction, uninstall)
+- Aliases shown inline in `gopher list` output for quick reference
+- Version normalization (omit 'go' prefix in all commands)
+- Graceful handling of missing/corrupted alias files
 - Clean, professional terminal output
 - No interference between progress indicators and other output
 - Better Windows terminal compatibility
@@ -81,8 +94,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Windows spinner compatibility (animations work correctly)
 - Terminal width detection prevents line wrapping
 - TTY detection for better piped output handling
+- Race conditions in concurrent alias operations (added mutex protection)
+- Alias file format migration (old array to map format)
+- Empty/missing alias file handling
 - Flag parsing order in CLI
 - JSON output for empty lists
+- Test panic recovery output in CI
+
+### Known Issues
+- **Version Installation Verification**: Downloaded binaries may report different version than requested (upstream Go distribution issue). Documented in `docs/internal/VERSION_INSTALLATION_BUG.md`. Fix planned for v1.0.1.
 
 ## [0.1.0] - 2024-01-01
 
