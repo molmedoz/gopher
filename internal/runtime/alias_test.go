@@ -1,41 +1,46 @@
 package runtime
 
 import (
-	"github.com/molmedoz/gopher/internal/config"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/molmedoz/gopher/internal/config"
 )
 
 func TestAliasManager_CreateAlias(t *testing.T) {
-	tmp := t.TempDir()
-	cfg := &config.Config{
-		InstallDir: filepath.Join(tmp, "install"),
-	}
-	am := NewAliasManager(cfg)
-
-	// Clear aliases for each test
-	am.aliases = make(map[string]*Alias)
-
 	tests := []struct {
 		name      string
 		aliasName string
 		version   string
 		wantErr   bool
 		errorMsg  string
+		setup     func(*AliasManager) // Setup function to run before test
 	}{
-		{"valid alias", "stable", "go1.21.0", false, ""},
-		{"duplicate alias", "stable", "go1.22.0", true, "ALIAS_ALREADY_EXISTS: alias 'stable' already exists (use 'gopher alias remove stable' first)"},
-		{"invalid version", "test", "invalid-version", true, "INVALID_VERSION: invalid version format: invalid-version"},
-		{"empty alias name", "", "go1.21.0", true, "INVALID_ALIAS_NAME: alias name cannot be empty"},
-		{"reserved name", "system", "go1.21.0", true, "RESERVED_NAME: name 'system' is reserved"},
+		{"valid alias", "stable", "go1.21.0", false, "", nil},
+		{"duplicate alias", "stable", "go1.22.0", true, "ALIAS_ALREADY_EXISTS: alias 'stable' already exists (use 'gopher alias remove stable' first)", func(am *AliasManager) {
+			// Create the first alias to test duplicate detection
+			_ = am.CreateAlias("stable", "go1.21.0")
+		}},
+		{"invalid version", "test", "invalid-version", true, "INVALID_VERSION: invalid version format: invalid-version", nil},
+		{"empty alias name", "", "go1.21.0", true, "INVALID_ALIAS_NAME: alias name cannot be empty", nil},
+		{"reserved name", "system", "go1.21.0", true, "RESERVED_NAME: name 'system' is reserved", nil},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Clear aliases for each test
-			am.aliases = make(map[string]*Alias)
+			// Create new AliasManager for each test to reset sync.Once
+			tmp := t.TempDir()
+			cfg := &config.Config{
+				InstallDir: filepath.Join(tmp, "install"),
+			}
+			am := NewAliasManager(cfg)
+
+			// Run setup if provided
+			if tt.setup != nil {
+				tt.setup(am)
+			}
 
 			err := am.CreateAlias(tt.aliasName, tt.version)
 			if (err != nil) != tt.wantErr {

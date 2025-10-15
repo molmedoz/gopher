@@ -38,6 +38,7 @@ package runtime
 import (
 	"fmt"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/molmedoz/gopher/internal/color"
@@ -112,9 +113,12 @@ type Alias struct {
 // caching for fast access.
 type AliasManager struct {
 	config      *config.Config
+	mu          sync.RWMutex // Protects concurrent access to aliases
+	once        sync.Once    // Ensures aliases are loaded only once
 	aliases     map[string]*Alias
 	aliasesFile string
 	manager     *Manager // Reference to the main manager for version checking
+	loadErr     error    // Stores any error from loading aliases
 }
 
 // Version represents a Go version with its metadata and status information.
