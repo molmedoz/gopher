@@ -74,7 +74,7 @@ func SetupMockDownloadScenario(t *testing.T, version, filename string) (*Downloa
 			<table>
 			<tr>
 				<td><a class="download" href="/dl/%s">%s</a></td>
-				<td>62.0MB</td>
+				<td>0.0MB</td>
 				<td><tt>5633d479dfae75ba7a78914ee380fa202bd6126e7c6b7c22e3ebc9e1a6ddc871</tt></td>
 			</tr>
 			</table>
@@ -83,9 +83,10 @@ func SetupMockDownloadScenario(t *testing.T, version, filename string) (*Downloa
 			`, filename, filename)
 			_, _ = w.Write([]byte(html))
 		} else if r.URL.Path == "/dl/"+filename {
-			// Mock file download
-			w.Header().Set("Content-Length", "65011712") // 62MB
-			_, _ = w.Write([]byte("mock file content"))
+			// Mock file download - returns "mock file content" (17 bytes)
+			content := "mock file content"
+			w.Header().Set("Content-Length", fmt.Sprintf("%d", len(content)))
+			_, _ = w.Write([]byte(content))
 		}
 	}))
 
