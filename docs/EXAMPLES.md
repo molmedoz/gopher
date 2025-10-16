@@ -91,6 +91,45 @@ gopher use 1.22.0
 
 # Remove old versions
 gopher uninstall 1.20.7
+
+# Clean download cache to free disk space
+gopher clean
+
+# Remove all Gopher data (requires confirmation)
+gopher purge
+```
+
+### Maintenance and Cleanup
+
+```bash
+# Clean download cache (safe, keeps installed versions)
+gopher clean
+
+# Example output:
+# Cleaning download cache...
+# ✓ Successfully cleaned download cache
+#   Freed: 125.3 MB
+
+# Purge all Gopher data (destructive, requires confirmation)
+gopher purge
+
+# Interactive confirmation:
+# ⚠️  WARNING: This will permanently delete ALL Gopher data:
+#   • All installed Go versions
+#   • Download cache
+#   • Configuration files
+#   • State files and aliases
+#   • Gopher-created symlinks
+#
+# This operation CANNOT be undone!
+#
+# Type 'yes' to confirm purge: yes
+#
+# Purging all Gopher data...
+# ✓ Successfully purged all Gopher data
+
+# After purge, you can reinitialize
+gopher init
 ```
 
 ### Working with System Go

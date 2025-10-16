@@ -16,6 +16,8 @@ Gopher v1.0.0 is a production-ready Go version manager with comprehensive featur
 - **System Integration**: Detect and work with system-installed Go
 - **List Versions**: View all installed and available Go versions
 - **Uninstall**: Clean removal of Go versions
+- **Clean**: Remove download cache to free disk space
+- **Purge**: Complete removal of all Gopher data (with confirmation)
 
 #### Alias System 🆕
 - **Create Aliases**: Assign friendly names to Go versions (`stable`, `latest`, `prod`)
@@ -40,6 +42,9 @@ Gopher v1.0.0 is a production-ready Go version manager with comprehensive featur
 - **Colored Output**: Clear, readable terminal output
 - **Comprehensive Help**: Built-in help for all commands
 - **Version Verification**: Check current active version
+- **CI Parity**: `make ci` runs same checks as GitHub Actions
+- **Tool Installation**: `make install-tools` sets up development environment
+- **Race Detection**: All tests include `-race` flag by default
 
 ### 📦 Installation
 

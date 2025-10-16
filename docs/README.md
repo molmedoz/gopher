@@ -64,8 +64,9 @@ docs/
 │   ├── DEVELOPER_GUIDE.md              # Development and contributing guide
 │   ├── API_REFERENCE.md                # API documentation
 │   ├── TEST_STRATEGY.md                # Testing architecture
-│   ├── REFACTORING_SUMMARY.md          # Recent changes
-│   └── LOGGING.md                      # Logging system
+│   ├── MAKEFILE_GUIDE.md               # Makefile and local CI
+│   ├── PROGRESS_SYSTEM.md              # Progress indicators
+│   └── E2E_TESTING.md                  # End-to-end testing
 │
 ├── 🛠️ Maintainer Documentation
 │   ├── DOCUMENTATION_ORGANIZATION.md   # Doc structure guide

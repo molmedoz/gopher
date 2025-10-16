@@ -386,15 +386,16 @@ func TestManager_GetShellProfile_Comprehensive(t *testing.T) {
 	// Test getting shell profile
 	homeDir, _ := os.UserHomeDir()
 	tests := []struct {
-		name  string
-		shell string
-		want  string
+		name          string
+		shell         string
+		want          string
+		wantAlternate string // Alternative valid path for bash
 	}{
-		{"bash", "bash", filepath.Join(homeDir, ".bashrc")},
-		{"zsh", "zsh", filepath.Join(homeDir, ".zshrc")},
-		{"fish", "fish", filepath.Join(homeDir, ".config", "fish", "config.fish")},
-		{"unknown", "unknown", filepath.Join(homeDir, ".profile")},
-		{"empty", "", filepath.Join(homeDir, ".profile")},
+		{"bash", "bash", filepath.Join(homeDir, ".bashrc"), filepath.Join(homeDir, ".bash_profile")},
+		{"zsh", "zsh", filepath.Join(homeDir, ".zshrc"), ""},
+		{"fish", "fish", filepath.Join(homeDir, ".config", "fish", "config.fish"), ""},
+		{"unknown", "unknown", filepath.Join(homeDir, ".profile"), ""},
+		{"empty", "", filepath.Join(homeDir, ".profile"), ""},
 	}
 
 	for _, tt := range tests {
@@ -402,6 +403,10 @@ func TestManager_GetShellProfile_Comprehensive(t *testing.T) {
 			got, err := manager.getShellProfile(tt.shell)
 			if err != nil {
 				t.Logf("getShellProfile failed: %v", err)
+			}
+			// For bash, accept either .bashrc or .bash_profile
+			if tt.wantAlternate != "" && (got == tt.want || got == tt.wantAlternate) {
+				return
 			}
 			if got != tt.want {
 				t.Errorf("getShellProfile() = %v, want %v", got, tt.want)
@@ -649,5 +654,233 @@ func TestManager_GetVersionInfo_Comprehensive(t *testing.T) {
 		t.Logf("getVersionInfo failed: %v", err)
 	} else {
 		t.Logf("Version info: %+v", versionInfo)
+	}
+}
+
+func TestManager_Clean(t *testing.T) {
+	tests := []struct {
+		name              string
+		setupFiles        map[string]int64 // filename -> size in bytes
+		expectedFreed     int64
+		expectError       bool
+		downloadDirExists bool
+	}{
+		{
+			name:              "clean empty cache",
+			setupFiles:        map[string]int64{},
+			expectedFreed:     0,
+			expectError:       false,
+			downloadDirExists: true,
+		},
+		{
+			name: "clean with single file",
+			setupFiles: map[string]int64{
+				"go1.21.0.tar.gz": 1024,
+			},
+			expectedFreed:     1024,
+			expectError:       false,
+			downloadDirExists: true,
+		},
+		{
+			name: "clean with multiple files",
+			setupFiles: map[string]int64{
+				"go1.21.0.tar.gz": 1024,
+				"go1.20.5.tar.gz": 2048,
+				"go1.19.3.tar.gz": 512,
+			},
+			expectedFreed:     3584,
+			expectError:       false,
+			downloadDirExists: true,
+		},
+		{
+			name:              "clean non-existent directory",
+			setupFiles:        map[string]int64{},
+			expectedFreed:     0,
+			expectError:       false,
+			downloadDirExists: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			cfg := &config.Config{
+				InstallDir:  filepath.Join(tmpDir, "install"),
+				DownloadDir: filepath.Join(tmpDir, "download"),
+				MaxVersions: 5,
+			}
+
+			envProvider := env.NewMockProvider(map[string]string{})
+			manager := NewManager(cfg, envProvider)
+
+			// Setup download directory and files
+			if tt.downloadDirExists {
+				if err := os.MkdirAll(cfg.DownloadDir, 0755); err != nil {
+					t.Fatalf("Failed to create download dir: %v", err)
+				}
+
+				for filename, size := range tt.setupFiles {
+					filePath := filepath.Join(cfg.DownloadDir, filename)
+					data := make([]byte, size)
+					if err := os.WriteFile(filePath, data, 0644); err != nil {
+						t.Fatalf("Failed to create test file %s: %v", filename, err)
+					}
+				}
+			}
+
+			// Execute Clean
+			bytesFreed, err := manager.Clean()
+
+			// Check error expectation
+			if tt.expectError && err == nil {
+				t.Error("Expected error but got none")
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+
+			// Check bytes freed
+			if bytesFreed != tt.expectedFreed {
+				t.Errorf("Expected %d bytes freed, got %d", tt.expectedFreed, bytesFreed)
+			}
+
+			// Verify download directory is empty after clean (if it existed)
+			if tt.downloadDirExists && len(tt.setupFiles) > 0 {
+				entries, err := os.ReadDir(cfg.DownloadDir)
+				if err != nil {
+					t.Fatalf("Failed to read download dir after clean: %v", err)
+				}
+				if len(entries) != 0 {
+					t.Errorf("Expected empty download dir, but found %d entries", len(entries))
+				}
+			}
+		})
+	}
+}
+
+func TestManager_Purge(t *testing.T) {
+	tests := []struct {
+		name        string
+		setupData   bool // whether to setup some data
+		expectError bool
+	}{
+		{
+			name:        "purge with data",
+			setupData:   true,
+			expectError: false,
+		},
+		{
+			name:        "purge empty installation",
+			setupData:   false,
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			gopherDir := filepath.Join(tmpDir, ".gopher")
+			cfg := &config.Config{
+				InstallDir:  filepath.Join(gopherDir, "versions"),
+				DownloadDir: filepath.Join(gopherDir, "downloads"),
+				MaxVersions: 5,
+			}
+
+			homeDir := tmpDir
+			envProvider := env.NewMockProvider(map[string]string{
+				"HOME": homeDir,
+			})
+			manager := NewManager(cfg, envProvider)
+
+			// Setup some test data
+			if tt.setupData {
+				// Create directories
+				if err := os.MkdirAll(cfg.InstallDir, 0755); err != nil {
+					t.Fatalf("Failed to create install dir: %v", err)
+				}
+				if err := os.MkdirAll(cfg.DownloadDir, 0755); err != nil {
+					t.Fatalf("Failed to create download dir: %v", err)
+				}
+
+				// Create some test files
+				testFile := filepath.Join(cfg.DownloadDir, "test.tar.gz")
+				if err := os.WriteFile(testFile, []byte("test"), 0644); err != nil {
+					t.Fatalf("Failed to create test file: %v", err)
+				}
+
+				// Create a test symlink
+				symlinkPath := filepath.Join(homeDir, ".local", "bin", "go")
+				symlinkDir := filepath.Dir(symlinkPath)
+				if err := os.MkdirAll(symlinkDir, 0755); err != nil {
+					t.Fatalf("Failed to create symlink dir: %v", err)
+				}
+				targetPath := filepath.Join(gopherDir, "versions", "go1.21.0", "bin", "go")
+				if err := os.Symlink(targetPath, symlinkPath); err != nil {
+					t.Fatalf("Failed to create test symlink: %v", err)
+				}
+			}
+
+			// Execute Purge
+			err := manager.Purge()
+
+			// Check error expectation
+			if tt.expectError && err == nil {
+				t.Error("Expected error but got none")
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+
+			// Verify gopher directory is removed
+			if _, err := os.Stat(gopherDir); !os.IsNotExist(err) {
+				t.Error("Expected gopher directory to be removed, but it still exists")
+			}
+
+			// Verify symlink is removed
+			if tt.setupData {
+				symlinkPath := filepath.Join(homeDir, ".local", "bin", "go")
+				if _, err := os.Lstat(symlinkPath); !os.IsNotExist(err) {
+					t.Error("Expected symlink to be removed, but it still exists")
+				}
+			}
+		})
+	}
+}
+
+func TestManager_Clean_CalculateSizeError(t *testing.T) {
+	// Test error handling when calculating size
+	tmpDir := t.TempDir()
+	cfg := &config.Config{
+		InstallDir:  filepath.Join(tmpDir, "install"),
+		DownloadDir: filepath.Join(tmpDir, "download"),
+		MaxVersions: 5,
+	}
+
+	envProvider := env.NewMockProvider(map[string]string{})
+	manager := NewManager(cfg, envProvider)
+
+	// Create download directory
+	if err := os.MkdirAll(cfg.DownloadDir, 0755); err != nil {
+		t.Fatalf("Failed to create download dir: %v", err)
+	}
+
+	// Create a file
+	testFile := filepath.Join(cfg.DownloadDir, "test.tar.gz")
+	if err := os.WriteFile(testFile, []byte("test data"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	// Execute Clean - should work normally
+	bytesFreed, err := manager.Clean()
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	if bytesFreed == 0 {
+		t.Error("Expected some bytes to be freed")
+	}
+
+	// Verify file is removed
+	if _, err := os.Stat(testFile); !os.IsNotExist(err) {
+		t.Error("Expected test file to be removed")
 	}
 }

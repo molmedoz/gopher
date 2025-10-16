@@ -257,3 +257,139 @@ func (m *Manager) autoCleanup() error {
 
 	return nil
 }
+
+// Clean removes the download cache to free up disk space.
+//
+// This function removes all downloaded Go archive files from the downloads
+// directory (~/.gopher/downloads/). It does not affect installed Go versions.
+// This is useful for freeing up disk space after installing Go versions.
+//
+// Returns:
+//   - int64: Total bytes freed
+//   - error: Any error encountered during cleanup
+//
+// Example:
+//
+//	bytesFreed, err := manager.Clean()
+//	if err != nil {
+//	    log.Fatal("Failed to clean:", err)
+//	}
+//	fmt.Printf("Freed %d bytes\n", bytesFreed)
+func (m *Manager) Clean() (int64, error) {
+	downloadDir := m.config.DownloadDir
+
+	// Check if download directory exists
+	if _, err := os.Stat(downloadDir); os.IsNotExist(err) {
+		return 0, nil // Nothing to clean
+	}
+
+	// Calculate total size before cleanup
+	var totalSize int64
+	err := filepath.Walk(downloadDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			totalSize += info.Size()
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to calculate download cache size: %w", err)
+	}
+
+	// If directory is empty or already clean
+	if totalSize == 0 {
+		return 0, nil
+	}
+
+	// Remove all files in the download directory
+	entries, err := os.ReadDir(downloadDir)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read download directory: %w", err)
+	}
+
+	for _, entry := range entries {
+		filePath := filepath.Join(downloadDir, entry.Name())
+		if err := os.RemoveAll(filePath); err != nil {
+			return 0, fmt.Errorf("failed to remove %s: %w", filePath, err)
+		}
+	}
+
+	return totalSize, nil
+}
+
+// Purge removes all Gopher data including installed versions, downloads,
+// configuration, and state files.
+//
+// This is a destructive operation that will:
+//   - Remove all installed Go versions
+//   - Remove the download cache
+//   - Remove configuration files
+//   - Remove state files (active version, aliases, etc.)
+//   - Remove all Gopher data directories
+//
+// WARNING: This operation cannot be undone. All installed versions and
+// configuration will be permanently deleted.
+//
+// Returns:
+//   - error: Any error encountered during purge
+//
+// Example:
+//
+//	if err := manager.Purge(); err != nil {
+//	    log.Fatal("Failed to purge:", err)
+//	}
+func (m *Manager) Purge() error {
+	// Get the base Gopher directory
+	gopherDir := filepath.Dir(m.config.InstallDir)
+
+	// Check if the directory exists
+	if _, err := os.Stat(gopherDir); os.IsNotExist(err) {
+		return nil // Nothing to purge
+	}
+
+	// Remove symlinks first (best effort, don't fail if symlinks don't exist)
+	m.removeSymlinks()
+
+	// Remove the entire Gopher directory
+	if err := os.RemoveAll(gopherDir); err != nil {
+		return fmt.Errorf("failed to remove Gopher directory: %w", err)
+	}
+
+	return nil
+}
+
+// removeSymlinks attempts to remove Gopher-created symlinks (best effort)
+func (m *Manager) removeSymlinks() {
+	var symlinkPaths []string
+
+	if runtime.GOOS == "windows" {
+		localAppData := m.envProvider.Getenv("LOCALAPPDATA")
+		if localAppData != "" {
+			symlinkPaths = []string{
+				filepath.Join(localAppData, "gopher", "bin", "go.exe"),
+			}
+		}
+	} else {
+		homeDir := m.envProvider.Getenv("HOME")
+		symlinkPaths = []string{
+			"/usr/local/bin/go",
+			filepath.Join(homeDir, ".local", "bin", "go"),
+			filepath.Join(homeDir, "bin", "go"),
+		}
+	}
+
+	for _, symlinkPath := range symlinkPaths {
+		// Check if it's a symlink
+		if info, err := os.Lstat(symlinkPath); err == nil && info.Mode()&os.ModeSymlink != 0 {
+			// Check if it points to a Gopher-managed version
+			if target, err := os.Readlink(symlinkPath); err == nil {
+				if strings.Contains(target, ".gopher") {
+					// It's a Gopher symlink, remove it
+					os.Remove(symlinkPath)
+				}
+			}
+		}
+	}
+}

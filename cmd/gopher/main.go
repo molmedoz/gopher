@@ -222,9 +222,14 @@ func main() {
 	// Parse flags first
 	flag.Parse()
 
+	// Mark unused flags as intentionally available for future use
+	_ = quiet
+	_ = q
+	_ = v
+
 	// Check for help flag
 	if *helpFlag {
-		showHelp()
+		_ = showHelp()
 		return
 	}
 
@@ -327,6 +332,10 @@ func executeCommand(manager *inruntime.Manager, command string, args []string) e
 		return showDebugInfo(manager)
 	case "alias":
 		return handleAliasCommand(args, manager)
+	case "clean":
+		return cleanDownloadCache(manager)
+	case "purge":
+		return purgeAllData(manager)
 	case "help":
 		return showHelp()
 	default:
@@ -604,7 +613,8 @@ func listRemoteInteractive(versions []downloader.VersionInfo, totalPages int) er
 }
 
 // listRemoteInteractiveString provides interactive pagination for string-based version lists
-func listRemoteInteractiveString(versions []string, totalPages int) error {
+// Currently unused but kept for potential future use
+func listRemoteInteractiveString(versions []string, totalPages int) error { //nolint:unused
 	currentPage := *page
 	scanner := bufio.NewScanner(os.Stdin)
 
@@ -797,7 +807,8 @@ func listInstalledInteractive(versions []inruntime.Version, totalPages int) erro
 
 // filterVersions filters versions based on the provided filter text
 // filterVersionsString filters a list of version strings based on a filter string
-func filterVersionsString(versions []string, filter string) []string {
+// Currently unused but kept for potential future use
+func filterVersionsString(versions []string, filter string) []string { //nolint:unused
 	if filter == "" {
 		return versions
 	}
@@ -835,7 +846,8 @@ func filterVersions(versions []downloader.VersionInfo, filter string) []download
 }
 
 // filterStableVersionsString filters out non-stable versions from a list of version strings
-func filterStableVersionsString(versions []string) []string {
+// Currently unused but kept for potential future use
+func filterStableVersionsString(versions []string) []string { //nolint:unused
 	var stable []string
 
 	for _, v := range versions {
@@ -991,6 +1003,8 @@ func showHelp() error {
 				"setup":       "Set up shell integration for persistent Go version switching",
 				"status":      "Show persistence status and shell integration info",
 				"debug":       "Show debug information for troubleshooting",
+				"clean":       "Remove download cache to free disk space",
+				"purge":       "Complete removal of all Gopher data (with confirmation)",
 				"env":         "Manage environment variables and configuration",
 				"version":     "Show gopher version",
 				"help":        "Show detailed help information",
@@ -1301,7 +1315,8 @@ func outputJSON(data any) error {
 }
 
 // setupShellIntegration sets up shell integration for persistent Go version switching
-func setupShellIntegration(manager *inruntime.Manager) error {
+// Currently unused but kept for potential future use
+func setupShellIntegration(manager *inruntime.Manager) error { //nolint:unused
 	// Create the gopher initialization script
 	initScript, err := createGopherInitScript(manager)
 	if err != nil {
@@ -1858,6 +1873,78 @@ func showDebugInfo(manager *inruntime.Manager) error {
 	}
 
 	return nil
+}
+
+// cleanDownloadCache removes the download cache to free disk space
+func cleanDownloadCache(manager *inruntime.Manager) error {
+	fmt.Println("Cleaning download cache...")
+
+	bytesFreed, err := manager.Clean()
+	if err != nil {
+		return errors.Wrapf(err, errors.ErrCodeUnknown, "failed to clean download cache")
+	}
+
+	if bytesFreed == 0 {
+		fmt.Println("✓ Download cache is already clean (no files to remove)")
+	} else {
+		// Convert bytes to human-readable format
+		sizeStr := formatBytes(bytesFreed)
+		fmt.Printf("✓ Successfully cleaned download cache\n")
+		fmt.Printf("  Freed: %s\n", sizeStr)
+	}
+
+	return nil
+}
+
+// purgeAllData removes all Gopher data with user confirmation
+func purgeAllData(manager *inruntime.Manager) error {
+	fmt.Println("⚠️  WARNING: This will permanently delete ALL Gopher data:")
+	fmt.Println("  • All installed Go versions")
+	fmt.Println("  • Download cache")
+	fmt.Println("  • Configuration files")
+	fmt.Println("  • State files and aliases")
+	fmt.Println("  • Gopher-created symlinks")
+	fmt.Println()
+	fmt.Println("This operation CANNOT be undone!")
+	fmt.Println()
+
+	// Ask for confirmation
+	fmt.Print("Type 'yes' to confirm purge: ")
+	var response string
+	_, _ = fmt.Scanln(&response) // Ignore error - empty input is valid (cancellation)
+
+	if strings.ToLower(strings.TrimSpace(response)) != "yes" {
+		fmt.Println("Purge cancelled.")
+		return nil
+	}
+
+	fmt.Println()
+	fmt.Println("Purging all Gopher data...")
+
+	if err := manager.Purge(); err != nil {
+		return errors.Wrapf(err, errors.ErrCodeUnknown, "failed to purge Gopher data")
+	}
+
+	fmt.Println("✓ Successfully purged all Gopher data")
+	fmt.Println("  All Gopher files and directories have been removed.")
+	fmt.Println()
+	fmt.Println("To use Gopher again, run: gopher init")
+
+	return nil
+}
+
+// formatBytes converts bytes to human-readable format
+func formatBytes(bytes int64) string {
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
+	}
+	div, exp := int64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
 
 // handleAliasCommand handles the alias command and its subcommands

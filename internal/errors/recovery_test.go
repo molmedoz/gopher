@@ -6,15 +6,15 @@ import (
 )
 
 func TestRecoverer(t *testing.T) {
-	logger := NewErrorLogger(LogLevelInfo)
-	recoverer := NewRecoverer(logger)
+	// Use nil logger in tests to avoid error output in CI
+	recoverer := NewRecoverer(nil)
 	if recoverer == nil {
 		t.Fatal("Expected recoverer to be created")
 	}
 
 	// Test recovering from panic
 	func() {
-		defer recoverer.Recover()
+		defer recoverer.Recover() //nolint:errcheck // intentionally ignoring error in test
 		panic("test panic")
 	}()
 
@@ -24,8 +24,8 @@ func TestRecoverer(t *testing.T) {
 
 // TestRecoverer_Comprehensive tests the recoverer comprehensively
 func TestRecoverer_Comprehensive(t *testing.T) {
-	logger := NewErrorLogger(LogLevelInfo)
-	recoverer := NewRecoverer(logger)
+	// Use nil logger in tests to avoid error output in CI
+	recoverer := NewRecoverer(nil)
 
 	if recoverer == nil {
 		t.Fatal("Expected recoverer to be created")
@@ -45,7 +45,7 @@ func TestRecoverer_Comprehensive(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			func() {
-				defer recoverer.Recover()
+				defer recoverer.Recover() //nolint:errcheck // intentionally ignoring error in test
 				panic(tt.panic)
 			}()
 		})

@@ -27,6 +27,8 @@ GOTEST := $(GO) test
 GOCLEAN := $(GO) clean
 GOINSTALL := $(GO) install
 GOFMT := $(GO) fmt
+GOPATH := $(shell $(GO) env GOPATH)
+GOBIN := $(GOPATH)/bin
 
 # Colors for output
 RED := \033[0;31m
@@ -54,12 +56,19 @@ help: ## Show this help message
 	@echo "  clean          - Clean build artifacts"
 	@echo ""
 	@echo "$(GREEN)Development Commands:$(NC)"
-	@echo "  test           - Run all tests"
+	@echo "  test           - Run all tests with race detection and coverage"
 	@echo "  test-verbose   - Run tests with verbose output"
 	@echo "  test-coverage  - Run tests with coverage"
-	@echo "  fmt            - Format Go code"
+	@echo "  fmt            - Format Go code with go fmt"
+	@echo "  imports        - Format imports with goimports"
+	@echo "  format         - Format code and imports (comprehensive)"
+	@echo "  check-format   - Check code format (CI mode, no modifications)"
+	@echo "  check-imports  - Check imports format (CI mode, no modifications)"
 	@echo "  lint           - Run linter"
 	@echo "  vet            - Run go vet"
+	@echo "  check          - Run all checks (fmt + vet + test)"
+	@echo "  ci             - Run CI checks locally (matches GitHub Actions)"
+	@echo "  install-tools  - Install all development tools"
 	@echo ""
 	@echo "$(GREEN)Release Commands:$(NC)"
 	@echo "  release              - Create release build"
@@ -137,9 +146,9 @@ clean: ## Clean build artifacts
 
 # Development Commands
 .PHONY: test
-test: ## Run all tests (with coverage report)
-	@echo "$(BLUE)Running tests with coverage...$(NC)"
-	@$(GOTEST) -covermode=atomic -coverpkg=./... -coverprofile=coverage.out ./...
+test: ## Run all tests with race detection and coverage
+	@echo "$(BLUE)Running tests with race detection and coverage...$(NC)"
+	@$(GOTEST) -race -covermode=atomic -coverpkg=./... -coverprofile=coverage.out ./...
 	@$(GO) tool cover -func=coverage.out | tail -n 1
 	@$(GO) tool cover -html=coverage.out -o coverage.html
 	@echo "$(GREEN)✅ Coverage report generated: coverage.html$(NC)"
@@ -159,18 +168,65 @@ test-coverage: ## Run tests with coverage (HTML + summary)
 	@echo "$(GREEN)✅ Coverage report generated: coverage.html$(NC)"
 
 .PHONY: fmt
-fmt: ## Format Go code
+fmt: ## Format Go code with go fmt
 	@echo "$(BLUE)Formatting Go code...$(NC)"
 	@$(GOFMT) ./...
 	@echo "$(GREEN)✅ Go code formatted$(NC)"
 
+.PHONY: imports
+imports: ## Format imports with goimports
+	@echo "$(BLUE)Formatting imports with goimports...$(NC)"
+	@if [ -f "$(GOBIN)/goimports" ]; then \
+		$(GOBIN)/goimports -w .; \
+		echo "$(GREEN)✅ Imports formatted$(NC)"; \
+	else \
+		echo "$(YELLOW)Warning: goimports not installed$(NC)"; \
+		echo "$(CYAN)Run 'make install-tools' to install goimports$(NC)"; \
+		exit 1; \
+	fi
+
+.PHONY: format
+format: fmt imports ## Format code and imports (comprehensive)
+	@echo "$(GREEN)✅ All formatting complete$(NC)"
+
+.PHONY: check-format
+check-format: ## Check if code is formatted (CI mode, doesn't modify files)
+	@echo "$(BLUE)Checking code format...$(NC)"
+	@UNFORMATTED=$$(gofmt -s -l . 2>&1); \
+	if [ -n "$$UNFORMATTED" ]; then \
+		echo "$(RED)The following files are not formatted:$(NC)"; \
+		echo "$$UNFORMATTED"; \
+		echo "$(CYAN)Run 'make fmt' to fix$(NC)"; \
+		exit 1; \
+	fi
+	@echo "$(GREEN)✅ Code format check passed$(NC)"
+
+.PHONY: check-imports
+check-imports: ## Check if imports are formatted (CI mode, doesn't modify files)
+	@echo "$(BLUE)Checking imports...$(NC)"
+	@if [ -f "$(GOBIN)/goimports" ]; then \
+		UNFORMATTED=$$($(GOBIN)/goimports -l . 2>&1); \
+		if [ -n "$$UNFORMATTED" ]; then \
+			echo "$(RED)The following files have import issues:$(NC)"; \
+			echo "$$UNFORMATTED"; \
+			echo "$(CYAN)Run 'make imports' to fix$(NC)"; \
+			exit 1; \
+		fi; \
+		echo "$(GREEN)✅ Import check passed$(NC)"; \
+	else \
+		echo "$(YELLOW)Warning: goimports not installed$(NC)"; \
+		echo "$(CYAN)Run 'make install-tools' to install goimports$(NC)"; \
+		exit 1; \
+	fi
+
 .PHONY: lint
 lint: ## Run linter
 	@echo "$(BLUE)Running linter...$(NC)"
-	@if command -v golangci-lint >/dev/null 2>&1; then \
-		golangci-lint run; \
+	@if [ -f "$(GOBIN)/golangci-lint" ]; then \
+		$(GOBIN)/golangci-lint run; \
 	else \
 		echo "$(YELLOW)Warning: golangci-lint not installed, skipping linting$(NC)"; \
+		echo "$(CYAN)Run 'make install-tools' to install golangci-lint$(NC)"; \
 	fi
 	@echo "$(GREEN)✅ Linting completed$(NC)"
 
@@ -249,8 +305,12 @@ tidy: ## Tidy dependencies
 	@echo "$(GREEN)✅ Dependencies tidied$(NC)"
 
 .PHONY: check
-check: fmt vet test ## Run all checks
+check: fmt vet test ## Run all checks (development mode - modifies files)
 	@echo "$(GREEN)✅ All checks completed$(NC)"
+
+.PHONY: ci
+ci: check-format check-imports vet lint test ## Run CI checks locally (matches GitHub Actions, no modifications)
+	@echo "$(GREEN)✅ All CI checks passed - ready for push!$(NC)"
 
 .PHONY: version
 version: ## Show version information
@@ -358,10 +418,22 @@ docker-test-macos-with-go: ## Test macOS with Go scenario
 
 # Install development tools
 .PHONY: install-tools
-install-tools: ## Install development tools
+install-tools: ## Install all development tools (goimports, golangci-lint, etc.)
 	@echo "$(BLUE)Installing development tools...$(NC)"
-	@$(GOINSTALL) github.com/golangci/golangci-lint/cmd/golangci-lint@v1.59.1
+	@echo "$(YELLOW)Installing goimports...$(NC)"
+	@$(GOINSTALL) golang.org/x/tools/cmd/goimports@latest
+	@echo "$(YELLOW)Installing golangci-lint...$(NC)"
+	@$(GOINSTALL) github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	@echo "$(YELLOW)Installing gofumpt...$(NC)"
+	@$(GOINSTALL) mvdan.cc/gofumpt@latest
 	@echo "$(GREEN)✅ Development tools installed$(NC)"
+	@echo "$(CYAN)Installed tools:$(NC)"
+	@echo "  - goimports (import formatting)"
+	@echo "  - golangci-lint (comprehensive linting)"
+	@echo "  - gofumpt (strict formatting)"
+
+.PHONY: install-dev-tools
+install-dev-tools: install-tools ## Alias for install-tools
 
 # Security Commands
 .PHONY: security-tools
@@ -375,8 +447,12 @@ security-tools: ## Install security tools
 .PHONY: security-scan
 security-scan: ## Run security scan
 	@echo "$(BLUE)Running security scan...$(NC)"
-	@echo "$(YELLOW)Running staticcheck...$(NC)"
-	@staticcheck ./...
+	@if [ -f "$(GOBIN)/staticcheck" ]; then \
+		echo "$(YELLOW)Running staticcheck...$(NC)"; \
+		$(GOBIN)/staticcheck ./...; \
+	else \
+		echo "$(YELLOW)Warning: staticcheck not installed, skipping$(NC)"; \
+	fi
 	@echo "$(YELLOW)Running go vet...$(NC)"
 	@go vet ./...
 	@echo "$(GREEN)✅ Security scan completed$(NC)"
@@ -384,8 +460,14 @@ security-scan: ## Run security scan
 .PHONY: vuln-check
 vuln-check: ## Check for vulnerabilities
 	@echo "$(BLUE)Checking for vulnerabilities...$(NC)"
-	@govulncheck ./...
-	@echo "$(GREEN)✅ Vulnerability check completed$(NC)"
+	@if [ -f "$(GOBIN)/govulncheck" ]; then \
+		$(GOBIN)/govulncheck ./...; \
+		echo "$(GREEN)✅ Vulnerability check completed$(NC)"; \
+	else \
+		echo "$(YELLOW)Warning: govulncheck not installed$(NC)"; \
+		echo "$(CYAN)Run 'make security-tools' to install govulncheck$(NC)"; \
+		exit 1; \
+	fi
 
 .PHONY: security-test
 security-test: ## Run security tests

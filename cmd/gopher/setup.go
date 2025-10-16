@@ -50,7 +50,8 @@ func runInteractiveSetup(manager *inruntime.Manager) error {
 }
 
 // runWindowsSetup handles Windows-specific setup
-func runWindowsSetup(manager *inruntime.Manager) error {
+// Currently unused but kept for potential future use
+func runWindowsSetup(manager *inruntime.Manager) error { //nolint:unused
 	fmt.Println("🪟 Windows Setup")
 	fmt.Println("================")
 
@@ -178,7 +179,8 @@ func runWindowsSetup(manager *inruntime.Manager) error {
 }
 
 // runMacOSSetup handles macOS-specific setup
-func runMacOSSetup(manager *inruntime.Manager) error {
+// Currently unused but kept for potential future use
+func runMacOSSetup(manager *inruntime.Manager) error { //nolint:unused
 	fmt.Println("🍎 macOS Setup")
 	fmt.Println("==============")
 
@@ -234,7 +236,8 @@ func runMacOSSetup(manager *inruntime.Manager) error {
 }
 
 // runLinuxSetup handles Linux-specific setup
-func runLinuxSetup(manager *inruntime.Manager) error {
+// Currently unused but kept for potential future use
+func runLinuxSetup(manager *inruntime.Manager) error { //nolint:unused
 	fmt.Println("🐧 Linux Setup")
 	fmt.Println("==============")
 
@@ -294,7 +297,8 @@ func runLinuxSetup(manager *inruntime.Manager) error {
 }
 
 // runGenericSetup handles generic setup for unsupported platforms
-func runGenericSetup(manager *inruntime.Manager) error {
+// Currently unused but kept for potential future use
+func runGenericSetup(manager *inruntime.Manager) error { //nolint:unused
 	fmt.Println("🔧 Generic Setup")
 	fmt.Println("================")
 
@@ -721,7 +725,7 @@ func showWindowsNextSteps(info *SystemInfo) {
 	fmt.Println("🚀 Windows Setup Instructions:")
 	fmt.Println("═══════════════════════════════════════════════════════════════")
 	fmt.Println()
-	
+
 	// Check if symlink dir is in PATH
 	if !info.IsInPath {
 		fmt.Println("⚠️  REQUIRED: Add Gopher's bin directory to PATH")
@@ -739,23 +743,23 @@ func showWindowsNextSteps(info *SystemInfo) {
 		fmt.Println("═══════════════════════════════════════════════════════════════")
 		fmt.Println()
 	}
-	
+
 	fmt.Println("STEP 1: Install a Go version")
 	fmt.Println("  gopher install 1.21.0")
 	fmt.Println()
-	
+
 	fmt.Println("STEP 2: Switch to it")
 	fmt.Println("  gopher use 1.21.0")
 	fmt.Println()
 	fmt.Println("  ⚠️  If you have system Go installed, Gopher will check PATH order")
 	fmt.Println("  and show you exact commands to fix it if needed.")
 	fmt.Println()
-	
+
 	fmt.Println("STEP 3: Verify it works")
 	fmt.Println("  go version")
 	fmt.Println("  # Should show: go version go1.21.0 windows/amd64")
 	fmt.Println()
-	
+
 	fmt.Println("═══════════════════════════════════════════════════════════════")
 	fmt.Println()
 	fmt.Println("💡 Tips:")
@@ -777,19 +781,19 @@ func showMacOSNextSteps(info *SystemInfo) {
 	fmt.Println("🚀 macOS Setup Instructions:")
 	fmt.Println("═══════════════════════════════════════════════════════════════")
 	fmt.Println()
-	
+
 	fmt.Println("STEP 1: Install a Go version")
 	fmt.Println("  gopher install 1.21.0")
 	fmt.Println()
-	
+
 	fmt.Println("STEP 2: Switch to it")
 	fmt.Println("  gopher use 1.21.0")
 	fmt.Println()
-	
+
 	fmt.Println("STEP 3: Verify it works")
 	fmt.Println("  go version")
 	fmt.Println()
-	
+
 	fmt.Println("═══════════════════════════════════════════════════════════════")
 	fmt.Println()
 	fmt.Println("💡 Tips:")
@@ -809,7 +813,7 @@ func showLinuxNextSteps(info *SystemInfo) {
 	fmt.Println("🚀 Linux Setup Instructions:")
 	fmt.Println("═══════════════════════════════════════════════════════════════")
 	fmt.Println()
-	
+
 	// Check if symlink dir is in PATH
 	if !info.IsInPath {
 		fmt.Println("⚠️  Add Gopher's bin directory to PATH:")
@@ -820,19 +824,19 @@ func showLinuxNextSteps(info *SystemInfo) {
 		fmt.Println("═══════════════════════════════════════════════════════════════")
 		fmt.Println()
 	}
-	
+
 	fmt.Println("STEP 1: Install a Go version")
 	fmt.Println("  gopher install 1.21.0")
 	fmt.Println()
-	
+
 	fmt.Println("STEP 2: Switch to it")
 	fmt.Println("  gopher use 1.21.0")
 	fmt.Println()
-	
+
 	fmt.Println("STEP 3: Verify it works")
 	fmt.Println("  go version")
 	fmt.Println()
-	
+
 	fmt.Println("═══════════════════════════════════════════════════════════════")
 	fmt.Println()
 	fmt.Println("💡 Tips:")

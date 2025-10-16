@@ -50,8 +50,13 @@ Thumbs.db
 
 # Test artifacts
 test-*
+!.github/workflows/test-matrix.yml
 coverage.out
 coverage.html
+
+# Accidentally generated shell scripts (should not be committed)
+internal/runtime/bash
+internal/runtime/*.sh
 
 # Build artifacts
 dist/

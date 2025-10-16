@@ -1,10 +1,7 @@
 module github.com/molmedoz/gopher
 
-go 1.24.0
+go 1.24.9
 
-toolchain go1.24.7
+require golang.org/x/term v0.36.0
 
-require (
-	golang.org/x/sys v0.37.0 // indirect
-	golang.org/x/term v0.36.0 // indirect
-)
+require golang.org/x/sys v0.37.0 // indirect

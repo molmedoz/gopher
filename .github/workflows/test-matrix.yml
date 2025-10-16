@@ -1,0 +1,88 @@
+name: Test Matrix
+
+on:
+  push:
+    branches: [ main ]  # Only comprehensive testing on main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+  pull_request:
+    branches: [ main ]  # Only for PRs to main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+
+# Cancel previous runs if new commit is pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-matrix:
+    name: Test Go ${{ matrix.go-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        go-version: ['1.22', '1.23', '1.24']
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Run unit tests with race detection
+        run: go test -v -race -coverprofile=coverage-${{ matrix.go-version }}-${{ matrix.os }}.out -covermode=atomic ./...
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.go-version }}-${{ matrix.os }}
+          path: coverage-${{ matrix.go-version }}-${{ matrix.os }}.out
+
+      - name: Build with version info
+        run: |
+          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+          COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "none")
+          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          go build -ldflags "-X main.appVersion=$VERSION -X main.appCommit=$COMMIT -X main.appDate=$BUILD_DATE -X main.appBuiltBy=ci -s -w" \
+            -v -o build/gopher${{ matrix.os == 'windows-latest' && '.exe' || '' }} ./cmd/gopher
+
+      - name: Run E2E tests
+        run: bash test/e2e.sh
+        shell: bash
+
+  test-docker:
+    name: Test Docker Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ['1.22', '1.23', '1.24']
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image with specific Go version
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./docker/Dockerfile.base
+          build-args: |
+            GO_VERSION=${{ matrix.go-version }}
+          push: false
+          tags: gopher:test-${{ matrix.go-version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test Docker image
+        run: |
+          docker run --rm gopher:test-${{ matrix.go-version }} gopher version
+          docker run --rm gopher:test-${{ matrix.go-version }} gopher help

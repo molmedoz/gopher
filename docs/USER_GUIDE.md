@@ -205,8 +205,14 @@ go version
 ### 4. Clean Up Old Versions
 
 ```bash
-# Remove a version you no longer need
+# Remove a specific version you no longer need
 gopher uninstall 1.20.7
+
+# Clean download cache to free disk space
+gopher clean
+
+# Completely remove all Gopher data (requires confirmation)
+gopher purge
 ```
 
 ## Command Reference
@@ -543,6 +549,75 @@ Debug Information:
 - Debugging shell integration problems
 - Checking configuration settings
 - Reporting bugs with system information
+
+### `gopher clean`
+
+Removes the download cache to free up disk space. This command deletes all downloaded Go archive files from `~/.gopher/downloads/` without affecting installed Go versions.
+
+```bash
+gopher clean
+```
+
+**Example Output:**
+```
+Cleaning download cache...
+✓ Successfully cleaned download cache
+  Freed: 125.3 MB
+```
+
+**When to Use:**
+- After installing multiple Go versions
+- When disk space is limited
+- As part of regular maintenance
+- Before creating backups
+
+**Note:** Downloaded files are only needed during installation. Once a Go version is installed, the download archive is no longer required.
+
+### `gopher purge`
+
+Completely removes all Gopher data including installed versions, download cache, configuration, state files, and symlinks. **This operation requires explicit confirmation** and cannot be undone.
+
+```bash
+gopher purge
+```
+
+**Interactive Confirmation:**
+```
+⚠️  WARNING: This will permanently delete ALL Gopher data:
+  • All installed Go versions
+  • Download cache
+  • Configuration files
+  • State files and aliases
+  • Gopher-created symlinks
+
+This operation CANNOT be undone!
+
+Type 'yes' to confirm purge: yes
+
+Purging all Gopher data...
+✓ Successfully purged all Gopher data
+  All Gopher files and directories have been removed.
+
+To use Gopher again, run: gopher init
+```
+
+**What Gets Removed:**
+- `~/.gopher/` directory (all installed versions)
+- Download cache (`~/.gopher/downloads/`)
+- Configuration file (`~/.gopher/config.json`)
+- State files (active version, aliases)
+- Gopher-created symlinks in:
+  - `/usr/local/bin/go`
+  - `~/.local/bin/go`
+  - `~/bin/go`
+
+**When to Use:**
+- Completely uninstalling Gopher
+- Starting fresh with a clean slate
+- Switching to a different Go version manager
+- Freeing up maximum disk space
+
+**Important:** After purging, you'll need to run `gopher init` to use Gopher again. Your system Go installation (if any) will remain unaffected.
 
 ## System Go Management
 

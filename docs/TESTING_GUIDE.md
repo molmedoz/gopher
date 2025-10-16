@@ -115,15 +115,17 @@ ls -lh build/gopher
 
 #### **2. Unit Tests**
 ```bash
-# Run all unit tests
+# Run all unit tests (includes race detection and coverage)
 make test
 
-# Run with coverage
+# Run with detailed coverage report
 make test-coverage
 
 # Run verbose tests
 make test-verbose
 ```
+
+**Note:** All tests now include `-race` flag by default for race condition detection (matches CI behavior).
 
 #### **3. Security Checks**
 ```bash

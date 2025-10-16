@@ -26,7 +26,9 @@ Welcome to the Gopher documentation! Gopher is a simple, fast, and dependency-fr
 - [Developer Guide](DEVELOPER_GUIDE.md) - Contributing and development
 - [API Reference](API_REFERENCE.md) - Detailed API documentation
 - [Test Strategy](TEST_STRATEGY.md) - Testing architecture
-- [Logging](LOGGING.md) - Logging system documentation
+- [Makefile Guide](MAKEFILE_GUIDE.md) - Local CI and Makefile commands
+- [Progress System](PROGRESS_SYSTEM.md) - Progress indicators and UI feedback
+- [E2E Testing](E2E_TESTING.md) - End-to-end testing guide
 
 ### Testing Documentation
 - [Testing Guide](TESTING_GUIDE.md) - Multi-platform testing strategy
@@ -35,7 +37,6 @@ Welcome to the Gopher documentation! Gopher is a simple, fast, and dependency-fr
 ### Project Documentation
 - [Roadmap](ROADMAP.md) - Future features and enhancements
 - [Release Notes](RELEASE_NOTES.md) - Release announcements
-- [Refactoring Summary](REFACTORING_SUMMARY.md) - Recent architectural changes
 
 ## 🔗 Additional Resources
 

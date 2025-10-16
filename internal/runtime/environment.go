@@ -570,7 +570,7 @@ func (m *Manager) checkWindowsPathOrder() error {
 	// If system Go comes before Gopher in PATH, warn the user
 	if systemIndex != -1 && gopherIndex != -1 && systemIndex < gopherIndex {
 		return fmt.Errorf(`
-⚠️  WARNING: System Go will take precedence over Gopher-managed versions!
+⚠️  WARNING: System Go will take precedence over Gopher-managed versions
 
 PATH Order Issue:
   Position %d: %s (System Go) ← Found FIRST
@@ -610,4 +610,3 @@ After fixing, verify with: where go
 
 	return nil
 }
-

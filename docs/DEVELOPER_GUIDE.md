@@ -21,14 +21,14 @@ Gopher follows a modular architecture with clear separation of concerns:
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   CLI Layer     │    │  Manager Layer  │    │  Storage Layer  │
 │                 │    │                 │    │                 │
-│  cmd/gopher/    │◄──►│ internal/version│◄──►│ internal/installer│
+│  cmd/gopher/    │◄──►│ internal/runtime│◄──►│ internal/installer│
 │  main.go        │    │  manager.go     │    │  installer.go   │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
          │              ┌─────────────────┐    ┌─────────────────┐
          │              │  System Layer   │    │ Download Layer  │
          └──────────────►│                 │    │                 │
-                        │ internal/version│    │ internal/downloader│
+                        │ internal/runtime│    │ internal/downloader│
                         │ system.go       │    │ downloader.go   │
                         └─────────────────┘    └─────────────────┘
                                  │
@@ -43,11 +43,14 @@ Gopher follows a modular architecture with clear separation of concerns:
 ### Key Components
 
 1. **CLI Layer** (`cmd/gopher/`): Command-line interface and argument parsing
-2. **Manager Layer** (`internal/version/`): Core version management logic
-3. **System Layer** (`internal/version/system.go`): System Go detection and management
+2. **Manager Layer** (`internal/runtime/`): Core version management logic
+3. **System Layer** (`internal/runtime/system.go`): System Go detection and management
 4. **Download Layer** (`internal/downloader/`): Go version downloading and verification
 5. **Storage Layer** (`internal/installer/`): Go version installation and extraction
 6. **Config Layer** (`internal/config/`): Configuration management
+7. **Environment Layer** (`internal/env/`): Environment variable management
+8. **Progress Layer** (`internal/progress/`): Progress bars and spinners
+9. **Alias Layer** (`internal/runtime/alias*.go`): Version alias management
 
 ## Project Structure
 
@@ -55,26 +58,50 @@ Gopher follows a modular architecture with clear separation of concerns:
 gopher/
 ├── cmd/
 │   └── gopher/
-│       └── main.go              # CLI entry point
+│       ├── main.go              # CLI entry point
+│       ├── setup.go             # Shell integration setup
+│       ├── helpers.go           # CLI helper functions
+│       └── interactive.go       # Interactive mode handling
 ├── internal/
-│   ├── version/
+│   ├── runtime/
 │   │   ├── types.go             # Core data structures
 │   │   ├── manager.go           # Main manager implementation
+│   │   ├── list.go              # List installed/available versions
+│   │   ├── install.go           # Install/uninstall operations
+│   │   ├── switch.go            # Version switching
 │   │   ├── system.go            # System Go detection
-│   │   ├── types_test.go        # Type tests
-│   │   ├── manager_test.go      # Manager tests
-│   │   └── system_test.go       # System tests
+│   │   ├── environment.go       # Environment setup
+│   │   ├── alias*.go            # Alias management (5 files)
+│   │   └── *_test.go            # Comprehensive test suite
 │   ├── config/
 │   │   ├── config.go            # Configuration management
+│   │   ├── env_test.go          # Environment tests
 │   │   └── config_test.go       # Config tests
 │   ├── downloader/
-│   │   └── downloader.go        # Download and verification
-│   └── installer/
-│       └── installer.go         # Installation and extraction
+│   │   ├── downloader.go        # Download and verification
+│   │   └── downloader_test.go   # Download tests
+│   ├── installer/
+│   │   ├── installer.go         # Installation and extraction
+│   │   └── installer_test.go    # Installer tests
+│   ├── env/
+│   │   ├── env.go               # Environment variable provider
+│   │   └── env_test.go          # Env tests
+│   ├── progress/
+│   │   ├── bar.go               # Progress bars
+│   │   ├── spinner.go           # Spinners
+│   │   └── terminal.go          # Terminal handling
+│   ├── errors/
+│   │   └── errors.go            # Error handling
+│   └── security/
+│       └── checksum.go          # Checksum verification
+├── test/
+│   ├── e2e.sh                   # E2E test suite (19 tests)
+│   └── integration_test.go      # Integration tests
 ├── docs/
 │   ├── USER_GUIDE.md            # User documentation
-│   ├── API_REFERENCE.md         # API documentation
-│   └── DEVELOPER_GUIDE.md       # This file
+│   ├── DEVELOPER_GUIDE.md       # This file
+│   ├── MAKEFILE_GUIDE.md        # Makefile reference
+│   └── ROADMAP.md               # Future plans
 ├── go.mod                       # Go module definition
 ├── go.sum                       # Go module checksums
 ├── Makefile                     # Build and development commands
@@ -85,7 +112,7 @@ gopher/
 
 ### Prerequisites
 
-- Go 1.21 or later
+- Go 1.24.9 or later
 - Git
 - Make (optional, for using Makefile commands)
 
@@ -617,7 +644,9 @@ This developer guide provides comprehensive information for contributing to Goph
 
 - **[API Reference](API_REFERENCE.md)** - Complete API documentation
 - **[Test Strategy](TEST_STRATEGY.md)** - Testing approach and best practices
-- **[Refactoring Summary](REFACTORING_SUMMARY.md)** - Recent architectural changes
+- **[Makefile Guide](MAKEFILE_GUIDE.md)** - Local CI and development commands
+- **[E2E Testing](E2E_TESTING.md)** - End-to-end testing guide
+- **[Progress System](PROGRESS_SYSTEM.md)** - Progress indicators documentation
 - **[Contributing](../CONTRIBUTING.md)** - Contribution guidelines
 - **[Roadmap](ROADMAP.md)** - Future features and enhancements
 

@@ -2,19 +2,23 @@
 
 This document outlines the planned features and enhancements for Gopher, organized by priority and implementation phases.
 
-## 🎯 **Current Status: Preparing v1.0.0 Release**
+## 🎯 **Current Status: v1.0.0 Released**
 
-Gopher v1.0.0 is **feature-complete** and ready for release with the following capabilities:
+Gopher v1.0.0 is **released** with the following capabilities:
 - ✅ Version installation, management, and switching
-- ✅ **Version Aliases & Shortcuts** (Full alias management system)
+- ✅ **Version Aliases & Shortcuts** (Full alias management system with 10 subcommands)
+- ✅ **Maintenance Commands** (`clean`, `purge` for disk management)
 - ✅ System Go integration and detection
 - ✅ Cross-platform support (macOS, Linux, Windows)
 - ✅ Environment management (GOPATH, GOROOT, etc.)
 - ✅ Shell integration and persistence
 - ✅ JSON output for scripting
-- ✅ **Progress System** (Progress bars, spinners, cross-platform)
-- ✅ Comprehensive testing (11/11 test suites passing, 36% coverage)
+- ✅ **Progress System** (Progress bars, spinners, cross-platform, auto-sizing)
+- ✅ **Makefile-based local CI** (Reproducible tests and builds)
+- ✅ **E2E Testing** (19 shell-based scenarios across platforms)
+- ✅ Comprehensive testing (50+ unit tests, 35% coverage, 19 E2E scenarios)
 - ✅ Multi-platform builds (Linux, macOS, Windows)
+- ✅ Thread-safe concurrent operations
 
 ---
 
@@ -23,11 +27,11 @@ Gopher v1.0.0 is **feature-complete** and ready for release with the following c
 ### 1. **Version Health Checks** ⭐ High Priority
 ```bash
 gopher doctor                 # Check system health
-gopher verify <version>       # Verify installation integrity
-gopher clean                  # Clean up corrupted installations
+gopher verify <version>       # Verify installation integrity (post-install verification)
 ```
 **Benefits**: Ensure installations work correctly, automatic issue detection
-**Implementation**: Add integrity checks, corrupted file detection, cleanup utilities
+**Implementation**: Add integrity checks, post-install verification (addresses VERSION_INSTALLATION_BUG)
+**Note**: `gopher clean` and `gopher purge` are already implemented in v1.0.0
 
 ### 2. **Enhanced Output Formatting** ⭐ High Priority
 ```bash
@@ -39,13 +43,13 @@ gopher list --color          # Colored output
 **Benefits**: Better integration with scripts and tools, improved readability
 **Implementation**: Add format options to existing commands, color support
 
-### 3. **Interactive Setup Wizard** ⭐ Medium Priority
+### 3. **Enhanced Interactive Setup** ⭐ Low Priority
 ```bash
-gopher init                   # Interactive setup wizard
-gopher configure              # Reconfigure settings
+gopher configure              # Reconfigure settings interactively
 ```
-**Benefits**: Easier initial setup, guided configuration
-**Implementation**: Interactive prompts for configuration, setup validation
+**Benefits**: Easier reconfiguration, guided settings changes
+**Implementation**: Interactive prompts for reconfiguration
+**Note**: `gopher init` is already implemented in v1.0.0
 
 ---
 
@@ -266,8 +270,9 @@ These features provide high value with minimal implementation effort:
 
 1. **`gopher doctor`** - Health check command
 2. **Better table formatting** - Enhanced `list` output with colors
-3. **`gopher clean`** - Cleanup command
-4. **`gopher verify`** - Installation verification
+3. **`gopher verify`** - Installation verification
+
+**Note:** `gopher clean` and `gopher purge` are already implemented in v1.0.0
 
 ---
 
@@ -353,10 +358,10 @@ These features provide high value with minimal implementation effort:
 
 This roadmap provides a clear path for Gopher's evolution from a solid foundation to a comprehensive Go version management solution. The phased approach ensures that high-value features are delivered quickly while maintaining the tool's simplicity and reliability.
 
-**Next Steps**: v1.0.0 is ready for release. After release, begin Phase 1 features starting with health checks and enhanced formatting.
+**Next Steps**: v1.0.0 is **released**. Focus shifts to v1.0.1 bug fixes (post-install verification) and v1.1.0 Phase 1 features (health checks, enhanced formatting).
 
 ---
 
 **Last Updated**: October 15, 2025  
-**Version**: 1.0 (Pre-release)  
+**Version**: 1.0  
 **Maintainer**: Gopher Development Team

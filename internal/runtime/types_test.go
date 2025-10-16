@@ -97,8 +97,14 @@ func TestVersionIsCompatible(t *testing.T) {
 		{
 			name: "incompatible arch",
 			version: &Version{
-				OS:       runtime.GOOS,
-				Arch:     "amd64",
+				OS: runtime.GOOS,
+				Arch: func() string {
+					// Use an architecture that's different from current
+					if runtime.GOARCH == "amd64" {
+						return "arm64"
+					}
+					return "amd64"
+				}(),
 				IsSystem: false,
 			},
 			expected: false,

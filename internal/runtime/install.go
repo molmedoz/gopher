@@ -69,8 +69,8 @@ func (m *Manager) Install(version string) error {
 
 	// Install the version
 	if err := m.installer.Install(version, filePath); err != nil {
-		// Clean up downloaded file on failure
-		m.downloader.Cleanup(filePath)
+		// Clean up downloaded file on failure (ignore errors on cleanup)
+		_ = m.downloader.Cleanup(filePath)
 		return errors.NewInstallationFailed(version, err)
 	}
 

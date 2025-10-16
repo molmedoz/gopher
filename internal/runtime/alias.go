@@ -3,46 +3,61 @@ package runtime
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/molmedoz/gopher/internal/errors"
-	"github.com/molmedoz/gopher/internal/security"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/molmedoz/gopher/internal/errors"
+	"github.com/molmedoz/gopher/internal/security"
 )
 
 // ============================================================================
 // Alias Management - Core Operations
 // ============================================================================
 
-// LoadAliases loads aliases from the aliases file
-func (am *AliasManager) LoadAliases() error {
+// loadAliasesOnce is the internal function that loads aliases exactly once
+func (am *AliasManager) loadAliasesOnce() {
 	// Check if aliases file exists
 	if _, err := os.Stat(am.aliasesFile); os.IsNotExist(err) {
 		// File doesn't exist, create empty aliases map
+		am.mu.Lock()
 		am.aliases = make(map[string]*Alias)
-		return nil
+		am.mu.Unlock()
+		return
 	}
 
 	// Read aliases file
 	data, err := os.ReadFile(am.aliasesFile)
 	if err != nil {
-		return fmt.Errorf("failed to read aliases file: %w", err)
+		am.loadErr = fmt.Errorf("failed to read aliases file: %w", err)
+		return
 	}
 
 	// Parse JSON
 	var aliases map[string]*Alias
 	if err := json.Unmarshal(data, &aliases); err != nil {
-		return fmt.Errorf("failed to parse aliases file: %w", err)
+		am.loadErr = fmt.Errorf("failed to parse aliases file: %w", err)
+		return
 	}
 
+	am.mu.Lock()
 	am.aliases = aliases
-	return nil
+	am.mu.Unlock()
+}
+
+// LoadAliases loads aliases from the aliases file (uses sync.Once for efficiency)
+func (am *AliasManager) LoadAliases() error {
+	am.once.Do(am.loadAliasesOnce)
+	return am.loadErr
 }
 
 // SaveAliases saves aliases to the aliases file
 func (am *AliasManager) SaveAliases() error {
+	am.mu.RLock()
+	defer am.mu.RUnlock()
+
 	// Ensure directory exists
 	dir := filepath.Dir(am.aliasesFile)
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -151,13 +166,16 @@ func (am *AliasManager) CreateAlias(name, version string) error {
 		return errors.Newf(errors.ErrCodeInvalidVersion, "invalid version: %v", err)
 	}
 
+	am.mu.Lock()
 	// Check if alias already exists
 	if _, exists := am.aliases[name]; exists {
+		am.mu.Unlock()
 		return errors.Newf(errors.ErrCodeAliasAlreadyExists, "alias '%s' already exists (use 'gopher alias remove %s' first)", name, name)
 	}
 
 	// Check if version is installed
 	if !am.isVersionInstalled(version) {
+		am.mu.Unlock()
 		return errors.Newf(errors.ErrCodeVersionNotInstalled, "version %s is not installed (use 'gopher install %s' first)", version, version)
 	}
 
@@ -170,6 +188,7 @@ func (am *AliasManager) CreateAlias(name, version string) error {
 	}
 
 	am.aliases[name] = alias
+	am.mu.Unlock()
 
 	// Save aliases
 	if err := am.SaveAliases(); err != nil {
@@ -186,6 +205,9 @@ func (am *AliasManager) GetAlias(name string) (*Alias, bool) {
 		return nil, false
 	}
 
+	am.mu.RLock()
+	defer am.mu.RUnlock()
+
 	alias, exists := am.aliases[name]
 	return alias, exists
 }
@@ -196,6 +218,9 @@ func (am *AliasManager) ListAliases() ([]*Alias, error) {
 	if err := am.LoadAliases(); err != nil {
 		return nil, errors.Wrapf(err, errors.ErrCodeAliasLoadFailed, "failed to load aliases")
 	}
+
+	am.mu.RLock()
+	defer am.mu.RUnlock()
 
 	var result []*Alias
 	for _, alias := range am.aliases {
@@ -217,13 +242,16 @@ func (am *AliasManager) RemoveAlias(name string) error {
 		return errors.Newf(errors.ErrCodeInvalidAliasName, "invalid alias name: %v", err)
 	}
 
+	am.mu.Lock()
 	// Check if alias exists
 	if _, exists := am.aliases[name]; !exists {
+		am.mu.Unlock()
 		return errors.Newf(errors.ErrCodeAliasNotFound, "alias '%s' does not exist", name)
 	}
 
 	// Remove alias
 	delete(am.aliases, name)
+	am.mu.Unlock()
 
 	// Save aliases
 	if err := am.SaveAliases(); err != nil {
@@ -250,20 +278,24 @@ func (am *AliasManager) UpdateAlias(name, version string) error {
 		return errors.Newf(errors.ErrCodeInvalidVersion, "invalid version: %v", err)
 	}
 
+	am.mu.Lock()
 	// Check if alias exists
 	alias, exists := am.aliases[name]
 	if !exists {
+		am.mu.Unlock()
 		return errors.Newf(errors.ErrCodeAliasNotFound, "alias '%s' does not exist", name)
 	}
 
 	// Check if version is installed
 	if !am.isVersionInstalled(version) {
+		am.mu.Unlock()
 		return errors.Newf(errors.ErrCodeVersionNotInstalled, "version %s is not installed (use 'gopher install %s' first)", version, version)
 	}
 
 	// Update alias
 	alias.Version = NormalizeVersion(version)
 	alias.Updated = time.Now()
+	am.mu.Unlock()
 
 	// Save aliases
 	if err := am.SaveAliases(); err != nil {
@@ -279,6 +311,9 @@ func (am *AliasManager) GetAliasesByVersion(version string) ([]*Alias, error) {
 	if err := am.LoadAliases(); err != nil {
 		return nil, errors.Wrapf(err, errors.ErrCodeAliasLoadFailed, "failed to load aliases")
 	}
+
+	am.mu.RLock()
+	defer am.mu.RUnlock()
 
 	normalizedVersion := NormalizeVersion(version)
 	var result []*Alias
@@ -310,6 +345,7 @@ func (am *AliasManager) SuggestAliases(version string) []string {
 		return []string{}
 	}
 
+	am.mu.RLock()
 	var suggestions []string
 	usedNames := make(map[string]bool)
 
@@ -317,6 +353,7 @@ func (am *AliasManager) SuggestAliases(version string) []string {
 	for name := range am.aliases {
 		usedNames[strings.ToLower(name)] = true
 	}
+	am.mu.RUnlock()
 
 	// Add standard patterns that are not in use
 	for _, pattern := range standardAliasPatterns {

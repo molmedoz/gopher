@@ -7,7 +7,7 @@
   [![GitHub Sponsors](https://img.shields.io/github/sponsors/molmedoz?style=social)](https://github.com/sponsors/molmedoz)
   -->
   [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-  [![Go Version](https://img.shields.io/badge/Go-1.20+-00ADD8?logo=go)](https://go.dev)
+  [![Go Version](https://img.shields.io/badge/Go-1.24.9+-00ADD8?logo=go)](https://go.dev)
 </div>
 
 A simple, fast, and lightweight Go version manager written in Go. Gopher enables you to install, manage, and switch between multiple Go versions, including your system-installed Go.
@@ -36,7 +36,7 @@ Gopher is designed to work across multiple platforms and Go versions:
 
 | Gopher Version | Supported Go Versions | Platforms | Architecture |
 |----------------|----------------------|-----------|--------------|
-| v1.0.0+ | 1.20+ | Linux, macOS, Windows | x86, x64, ARM, ARM64 |
+| v1.0.0+ | 1.24.9+ | Linux, macOS, Windows | x86, x64, ARM, ARM64 |
 
 **Platform Support:**
 - ✅ **Linux**: All major distributions (Ubuntu, Debian, Fedora, CentOS, Arch, etc.)
@@ -45,6 +45,7 @@ Gopher is designed to work across multiple platforms and Go versions:
 
 **Go Version Support:**
 - Manages any Go version from 1.20 onwards
+- Gopher itself requires Go 1.24.9+ to build
 - Can detect and manage system-installed Go versions
 - Supports pre-release and beta versions
 
@@ -159,6 +160,12 @@ gopher current
 
 # Uninstall a Go version
 gopher uninstall 1.20.7
+
+# Clean download cache
+gopher clean
+
+# Remove all Gopher data (requires confirmation)
+gopher purge
 
 # Show detailed help
 gopher help
@@ -299,6 +306,12 @@ gopher list
 
 # Switch to system Go
 gopher use system
+
+# Clean up download cache
+gopher clean
+
+# If you want to completely remove Gopher (requires confirmation)
+gopher purge
 ```
 
 ### Scripting with JSON

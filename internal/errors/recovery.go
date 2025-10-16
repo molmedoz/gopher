@@ -26,7 +26,7 @@ func (r *Recoverer) Recover() error {
 
 		// Create a GopherError for the panic
 		err := Newf(ErrCodeUnknown, "panic occurred: %v", recovered)
-		err.WithDetails(fmt.Sprintf("Stack trace:\n%s", string(stack)))
+		err = err.WithDetails(fmt.Sprintf("Stack trace:\n%s", string(stack)))
 
 		// Log the panic
 		if r.logger != nil {
@@ -78,7 +78,7 @@ type RecoverFunc func()
 func Recover(logger *ErrorLogger) RecoverFunc {
 	recoverer := NewRecoverer(logger)
 	return func() {
-		recoverer.Recover()
+		_ = recoverer.Recover()
 	}
 }
 

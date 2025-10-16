@@ -130,13 +130,7 @@ func ValidateDirectoryPath(path string) error {
 		return err
 	}
 
-	// Additional directory-specific validations
-	if strings.HasSuffix(path, "/") || strings.HasSuffix(path, "\\") {
-		// Remove trailing separators for validation
-		cleanPath := strings.TrimSuffix(strings.TrimSuffix(path, "/"), "\\")
-		path = cleanPath
-	}
-
+	// Trailing separators are already handled by ValidatePath
 	return nil
 }
 
