@@ -75,8 +75,8 @@ help: ## Show this help message
 	@echo "  dist                 - Create distribution packages"
 	@echo "  goreleaser-check     - Validate GoReleaser config"
 	@echo "  goreleaser-snapshot  - Build snapshot (doesn't publish)"
-	@echo "  validate-release     - Validate release readiness (requires TAG=vX.Y.Z)"
-	@echo "  create-tag           - Create and push release tag (requires TAG=vX.Y.Z)"
+	@echo "  prepare-release      - Prepare for release (requires VERSION=X.Y.Z)"
+	@echo "                         Use GitHub Actions 'Create Release' workflow to actually release"
 	@echo ""
 	@echo "$(GREEN)Utility Commands:$(NC)"
 	@echo "  deps           - Download dependencies"
@@ -268,28 +268,28 @@ goreleaser-snapshot: ## Build snapshot release (doesn't publish)
 	@goreleaser release --snapshot --clean
 	@echo "$(GREEN)✅ Snapshot build complete in dist/$(NC)"
 
-.PHONY: validate-release
-validate-release: ## Validate release readiness
-	@if [ -z "$(TAG)" ]; then \
-		echo "$(RED)❌ Error: TAG not specified$(NC)"; \
-		echo "Usage: make validate-release TAG=v1.0.0"; \
+.PHONY: prepare-release
+prepare-release: ## Prepare for release (run before creating GitHub release)
+	@if [ -z "$(VERSION)" ]; then \
+		echo "$(RED)❌ Error: VERSION not specified$(NC)"; \
+		echo "Usage: make prepare-release VERSION=1.0.0"; \
 		exit 1; \
 	fi
-	@./scripts/validate-release.sh $(TAG)
-
-.PHONY: create-tag
-create-tag: ## Create and push release tag (requires TAG=vX.Y.Z)
-	@if [ -z "$(TAG)" ]; then \
-		echo "$(RED)❌ Error: TAG not specified$(NC)"; \
-		echo "Usage: make create-tag TAG=v1.0.0"; \
-		exit 1; \
-	fi
-	@echo "$(BLUE)Creating release tag $(TAG)...$(NC)"
-	@./scripts/validate-release.sh $(TAG)
-	@git tag -a $(TAG) -m "Release $(TAG)"
-	@git push origin $(TAG)
-	@echo "$(GREEN)✅ Tag $(TAG) created and pushed$(NC)"
-	@echo "$(CYAN)Watch the release at: https://github.com/molmedoz/gopher/actions$(NC)"
+	@echo "$(BLUE)Preparing release $(VERSION)...$(NC)"
+	@echo "$(YELLOW)Running pre-release checks...$(NC)"
+	@$(MAKE) ci
+	@echo "$(GREEN)✅ Pre-release checks passed$(NC)"
+	@echo ""
+	@echo "$(CYAN)Next steps:$(NC)"
+	@echo "1. Commit all changes"
+	@echo "2. Push to your branch"
+	@echo "3. Create and merge PR to master"
+	@echo "4. Go to: https://github.com/molmedoz/gopher/actions/workflows/create-release.yml"
+	@echo "5. Click 'Run workflow'"
+	@echo "6. Enter version: $(VERSION)"
+	@echo "7. Click 'Run workflow'"
+	@echo ""
+	@echo "$(GREEN)The workflow will validate, test, tag, build, and release automatically!$(NC)"
 
 # Utility Commands
 .PHONY: deps
