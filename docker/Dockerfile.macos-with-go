@@ -1,7 +1,7 @@
 # Scenario 6: macOS, Go already installed
 # This tests Gopher in a macOS environment with system Go
 
-FROM golang:1.21-bullseye
+FROM golang:1.24-bullseye
 
 # Install additional dependencies
 RUN apt-get update && apt-get install -y \

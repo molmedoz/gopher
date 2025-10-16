@@ -2,7 +2,7 @@
 # This tests Gopher in a Windows environment with system Go
 # Note: Using Ubuntu as Windows container alternative for cross-platform testing
 
-FROM golang:1.21-bullseye
+FROM golang:1.24-bullseye
 
 # Install additional dependencies
 RUN apt-get update && apt-get install -y \
