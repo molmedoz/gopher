@@ -42,7 +42,7 @@ jobs:
           go tool cover -func=coverage-combined.out
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           file: ./coverage-combined.out
           flags: unittests
@@ -59,7 +59,7 @@ jobs:
 
       - name: Comment PR with coverage
         if: github.event_name == 'pull_request'
-        uses: romeovs/lcov-reporter-action@v0.3.1
+        uses: romeovs/lcov-reporter-action@v0.4.0
         with:
           lcov-file: coverage-combined.out
           github-token: ${{ secrets.GITHUB_TOKEN }}
