@@ -1,7 +1,7 @@
 # Scenario 2: Unix OS, Go already installed
 # This tests Gopher in a Linux environment with system Go
 
-FROM golang:1.21-alpine
+FROM golang:1.24-alpine
 
 # Install additional dependencies
 RUN apk add --no-cache \

@@ -2,7 +2,7 @@
 # This simulates Windows behavior using Linux for cross-platform testing
 # Note: This is not a true Windows container but simulates Windows paths and behavior
 
-FROM golang:1.21-bullseye
+FROM golang:1.24-bullseye
 
 # Install additional dependencies
 RUN apt-get update && apt-get install -y \
