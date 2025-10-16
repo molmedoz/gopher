@@ -298,8 +298,8 @@ chocolateys:
     # Source repository
     source_repo: "https://push.chocolatey.org/"
     
-    # Skip publish until API key is configured
-    skip_publish: true
+    # API key is configured - enable publishing
+    skip_publish: false
 
 # Snapcraft
 # NOTE: Disabled until SNAPCRAFT_STORE_CREDENTIALS is set in GitHub Secrets
