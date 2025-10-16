@@ -91,9 +91,10 @@ This index helps you find the right documentation quickly. All docs are organize
 
 | Document | Purpose | Use When |
 |----------|---------|----------|
-| **[CHANGELOG.md](CHANGELOG.md)** | Version history | Checking what changed |
+| **[CHANGELOG.md](CHANGELOG.md)** | Version history (technical) | Checking what changed |
 | **[docs/ROADMAP.md](docs/ROADMAP.md)** | Future features | Planning, contributing |
-| **[docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md)** | Release announcements | Upgrading |
+| **[docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md)** | Release announcements (user-friendly) | Upgrading |
+| **[docs/RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md)** 🆕 | How to create releases | Maintainers preparing releases |
 
 ---
 
@@ -219,7 +220,8 @@ gopher/
     │
     └── 📋 Project Documentation
         ├── ROADMAP.md             # Future plans
-        └── RELEASE_NOTES.md       # Release announcements
+        ├── RELEASE_NOTES.md       # Release announcements
+        └── RELEASE_PROCESS.md     # How to create releases
 ```
 
 ---

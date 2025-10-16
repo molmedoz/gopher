@@ -7,24 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- **Development Tools**
-  - `make install-tools` - Automatically install goimports, golangci-lint, and gofumpt
-  - `make check-format` - Check code format without modifying (CI mode)
-  - `make check-imports` - Check imports without modifying (CI mode)
-  - `make ci` - Run complete CI workflow locally (matches GitHub Actions)
-  - Automatic tool path resolution (no PATH configuration needed)
-
-### Changed
-- **Testing**: Added `-race` flag to all tests by default for race condition detection
-- **Makefile**: Tools now use full paths from GOPATH/bin (no PATH setup required)
-- **CI/CD**: Added version injection to all GitHub Actions builds
-- **CI/CD**: Added race detection to all test workflows
-- **Documentation**: Updated all guides for new workflow and CI parity
-
-### Fixed
-- Linter error in `cmd/gopher/main.go`: Added error handling for `fmt.Scanln`
-- golangci-lint version compatibility (now uses @latest)
+*No unreleased changes yet*
 
 ## [1.0.0] - 2025-10-15
 
@@ -69,7 +52,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `gopher clean` - Remove download cache to free disk space
   - `gopher purge` - Complete removal of all Gopher data with confirmation
   
+- **Development Tools**
+  - `make install-tools` - Automatically install goimports, golangci-lint, and gofumpt
+  - `make check-format` - Check code format without modifying (CI mode)
+  - `make check-imports` - Check imports without modifying (CI mode)
+  - `make ci` - Run complete CI workflow locally (matches GitHub Actions)
+  - Automatic tool path resolution (no PATH configuration needed)
+  
 ### Technical Improvements
+- **Testing**: All tests include `-race` flag by default for race condition detection
+- **Makefile**: Tools use full paths from GOPATH/bin (no PATH setup required)
+- **CI/CD**: Version injection added to all GitHub Actions builds
+- **CI/CD**: Race detection added to all test workflows
+- **CI/Local Parity**: `make ci` matches GitHub Actions exactly
 - **Dependencies**: Uses `golang.org/x/term` for enhanced terminal support
 - **Testing**: 50+ unit tests with 35% coverage + 19 E2E test scenarios
 - **CI/CD**: GitHub Actions workflows for lint, test, build, security, coverage
