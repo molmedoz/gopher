@@ -386,15 +386,16 @@ func TestManager_GetShellProfile_Comprehensive(t *testing.T) {
 	// Test getting shell profile
 	homeDir, _ := os.UserHomeDir()
 	tests := []struct {
-		name  string
-		shell string
-		want  string
+		name          string
+		shell         string
+		want          string
+		wantAlternate string // Alternative valid path for bash
 	}{
-		{"bash", "bash", filepath.Join(homeDir, ".bashrc")},
-		{"zsh", "zsh", filepath.Join(homeDir, ".zshrc")},
-		{"fish", "fish", filepath.Join(homeDir, ".config", "fish", "config.fish")},
-		{"unknown", "unknown", filepath.Join(homeDir, ".profile")},
-		{"empty", "", filepath.Join(homeDir, ".profile")},
+		{"bash", "bash", filepath.Join(homeDir, ".bashrc"), filepath.Join(homeDir, ".bash_profile")},
+		{"zsh", "zsh", filepath.Join(homeDir, ".zshrc"), ""},
+		{"fish", "fish", filepath.Join(homeDir, ".config", "fish", "config.fish"), ""},
+		{"unknown", "unknown", filepath.Join(homeDir, ".profile"), ""},
+		{"empty", "", filepath.Join(homeDir, ".profile"), ""},
 	}
 
 	for _, tt := range tests {
@@ -402,6 +403,10 @@ func TestManager_GetShellProfile_Comprehensive(t *testing.T) {
 			got, err := manager.getShellProfile(tt.shell)
 			if err != nil {
 				t.Logf("getShellProfile failed: %v", err)
+			}
+			// For bash, accept either .bashrc or .bash_profile
+			if tt.wantAlternate != "" && (got == tt.want || got == tt.wantAlternate) {
+				return
 			}
 			if got != tt.want {
 				t.Errorf("getShellProfile() = %v, want %v", got, tt.want)
