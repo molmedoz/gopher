@@ -226,7 +226,7 @@ func TestDownloadInfo(t *testing.T) {
 			</body>
 			</html>
 			`
-			w.Write([]byte(html))
+			_, _ = w.Write([]byte(html))
 		}
 	}))
 	defer server.Close()
@@ -299,7 +299,7 @@ func TestDownload(t *testing.T) {
 			</body>
 			</html>
 			`
-			w.Write([]byte(html))
+			_, _ = w.Write([]byte(html))
 		} else {
 			// Handle any platform-specific file download
 			// Returns "mock file content" (17 bytes, SHA256: 5633d479dfae75ba7a78914ee380fa202bd6126e7c6b7c22e3ebc9e1a6ddc871)
@@ -307,7 +307,7 @@ func TestDownload(t *testing.T) {
 			w.Header().Set("Content-Length", fmt.Sprintf("%d", len(content)))
 			w.Header().Set("Content-Type", "application/octet-stream")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(content))
+			_, _ = w.Write([]byte(content))
 		}
 	}))
 	defer server.Close()
@@ -377,7 +377,7 @@ func TestDownloadExistingFile(t *testing.T) {
 			</body>
 			</html>
 			`
-			w.Write([]byte(html))
+			_, _ = w.Write([]byte(html))
 		}
 	}))
 	defer server.Close()
@@ -488,7 +488,7 @@ func TestListAvailableVersions(t *testing.T) {
 		</body>
 		</html>
 		`
-		w.Write([]byte(html))
+		_, _ = w.Write([]byte(html))
 	}))
 	defer server.Close()
 

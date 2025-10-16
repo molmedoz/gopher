@@ -141,6 +141,6 @@ func (tw *terminalWriter) flush() {
 
 	// Try to sync if the writer supports it
 	if syncer, ok := tw.output.(interface{ Sync() error }); ok {
-		syncer.Sync()
+		_ = syncer.Sync()
 	}
 }

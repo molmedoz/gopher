@@ -63,7 +63,7 @@ func TestProgressBarDisplay(t *testing.T) {
 
 	// Read captured output
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	_, _ = io.Copy(&buf, r)
 	output := buf.String()
 
 	// Check that output contains expected elements
@@ -159,7 +159,7 @@ func TestSpinnerStartStop(t *testing.T) {
 
 	// Read captured output
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	_, _ = io.Copy(&buf, r)
 	output := buf.String()
 
 	// Check that output contains expected elements
@@ -188,7 +188,7 @@ func TestSimpleProgress(t *testing.T) {
 
 	// Read captured output
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	_, _ = io.Copy(&buf, r)
 	output := buf.String()
 
 	// Check that output contains expected elements

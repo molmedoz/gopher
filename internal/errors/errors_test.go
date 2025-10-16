@@ -126,9 +126,9 @@ func TestErrorConstructors(t *testing.T) {
 
 func TestErrorWithContext(t *testing.T) {
 	err := New(ErrCodeInvalidVersion, "test error")
-	err.WithContext("version", "1.2.3")
-	err.WithContext("command", "install")
-	err.WithDetails("Additional details here")
+	err = err.WithContext("version", "1.2.3")
+	err = err.WithContext("command", "install")
+	err = err.WithDetails("Additional details here")
 
 	if err.Context["version"] != "1.2.3" {
 		t.Error("Expected version context to be set")

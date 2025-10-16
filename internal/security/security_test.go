@@ -199,7 +199,7 @@ func TestValidateFilePermissions(t *testing.T) {
 				filePath := filepath.Join(tmpDir, "valid.txt")
 				file, _ := os.Create(filePath)
 				file.Close()
-				os.Chmod(filePath, 0644)
+				_ = os.Chmod(filePath, 0644)
 				return filePath
 			},
 			0644,
@@ -211,7 +211,7 @@ func TestValidateFilePermissions(t *testing.T) {
 				filePath := filepath.Join(tmpDir, "world_writable.txt")
 				file, _ := os.Create(filePath)
 				file.Close()
-				os.Chmod(filePath, 0666)
+				_ = os.Chmod(filePath, 0666)
 				return filePath
 			},
 			0644,
@@ -223,7 +223,7 @@ func TestValidateFilePermissions(t *testing.T) {
 				filePath := filepath.Join(tmpDir, "group_writable.txt")
 				file, _ := os.Create(filePath)
 				file.Close()
-				os.Chmod(filePath, 0620)
+				_ = os.Chmod(filePath, 0620)
 				return filePath
 			},
 			0644,

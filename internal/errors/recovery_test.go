@@ -14,7 +14,7 @@ func TestRecoverer(t *testing.T) {
 
 	// Test recovering from panic
 	func() {
-		defer recoverer.Recover()
+		defer recoverer.Recover() //nolint:errcheck // intentionally ignoring error in test
 		panic("test panic")
 	}()
 
@@ -45,7 +45,7 @@ func TestRecoverer_Comprehensive(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			func() {
-				defer recoverer.Recover()
+				defer recoverer.Recover() //nolint:errcheck // intentionally ignoring error in test
 				panic(tt.panic)
 			}()
 		})

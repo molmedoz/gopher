@@ -26,14 +26,14 @@ func TestDownloadWithMock(t *testing.T) {
 			</body>
 			</html>
 			`
-			w.Write([]byte(html))
+			_, _ = w.Write([]byte(html))
 		} else if r.URL.Path == "/go1.21.0.darwin-arm64.tar.gz" {
 			// Mock file download
 			content := "mock file content"
 			w.Header().Set("Content-Length", fmt.Sprintf("%d", len(content)))
 			w.Header().Set("Content-Type", "application/octet-stream")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(content))
+			_, _ = w.Write([]byte(content))
 		}
 	}))
 	defer server.Close()
@@ -80,14 +80,14 @@ func TestGetDownloadInfo(t *testing.T) {
 			</body>
 			</html>
 			`
-			w.Write([]byte(html))
+			_, _ = w.Write([]byte(html))
 		} else if r.URL.Path == "/go1.21.0.darwin-arm64.tar.gz" {
 			// Mock file download
 			content := "mock file content"
 			w.Header().Set("Content-Length", fmt.Sprintf("%d", len(content)))
 			w.Header().Set("Content-Type", "application/octet-stream")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(content))
+			_, _ = w.Write([]byte(content))
 		}
 	}))
 	defer server.Close()

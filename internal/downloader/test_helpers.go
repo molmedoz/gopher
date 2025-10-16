@@ -81,11 +81,11 @@ func SetupMockDownloadScenario(t *testing.T, version, filename string) (*Downloa
 			</body>
 			</html>
 			`, filename, filename)
-			w.Write([]byte(html))
+			_, _ = w.Write([]byte(html))
 		} else if r.URL.Path == "/dl/"+filename {
 			// Mock file download
 			w.Header().Set("Content-Length", "65011712") // 62MB
-			w.Write([]byte("mock file content"))
+			_, _ = w.Write([]byte("mock file content"))
 		}
 	}))
 

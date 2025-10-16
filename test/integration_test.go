@@ -330,16 +330,16 @@ func TestIntegration_ConcurrentOperations(t *testing.T) {
 			defer func() { done <- true }()
 
 			// Test alias validation
-			aliasManager.ValidateAliasName("test")
+			_ = aliasManager.ValidateAliasName("test")
 
 			// Test listing aliases
-			aliasManager.ListAliases()
+			_, _ = aliasManager.ListAliases()
 
 			// Test checking if version is installed
-			manager.IsInstalled("go1.21.0")
+			_, _ = manager.IsInstalled("go1.21.0")
 
 			// Test listing installed versions
-			manager.ListInstalled()
+			_, _ = manager.ListInstalled()
 		}(i)
 	}
 

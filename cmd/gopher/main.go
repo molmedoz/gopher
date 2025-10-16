@@ -229,7 +229,7 @@ func main() {
 
 	// Check for help flag
 	if *helpFlag {
-		showHelp()
+		_ = showHelp()
 		return
 	}
 
