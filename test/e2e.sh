@@ -260,14 +260,30 @@ fi
 #===========================================
 test_start "gopher clean"
 OUTPUT=$(run_gopher clean)
-if echo "$OUTPUT" | grep -q "Cleaning up\|already clean\|No downloads"; then
+if echo "$OUTPUT" | grep -q "Cleaning download cache\|already clean\|Successfully cleaned"; then
     test_pass
 else
     test_fail "clean" "Expected clean output"
 fi
 
 #===========================================
-# TEST 15: Error Handling - Invalid Command
+# TEST 15: Purge Command (Cancellation)
+#===========================================
+test_start "gopher purge (cancelled)"
+set +e
+# Test that purge shows warning and can be cancelled
+OUTPUT=$(echo "no" | run_gopher purge 2>&1)
+EXIT_CODE=$?
+set -e
+# Should show warning message
+if echo "$OUTPUT" | grep -q "WARNING.*permanently delete\|Purge cancelled"; then
+    test_pass
+else
+    test_fail "purge-cancel" "Expected purge warning or cancellation message"
+fi
+
+#===========================================
+# TEST 16: Error Handling - Invalid Command
 #===========================================
 test_start "gopher invalid-command (should error)"
 set +e
@@ -281,7 +297,7 @@ else
 fi
 
 #===========================================
-# TEST 16: Error Handling - Invalid Version
+# TEST 17: Error Handling - Invalid Version
 #===========================================
 test_start "gopher install invalid-version (should error)"
 set +e
@@ -295,7 +311,7 @@ else
 fi
 
 #===========================================
-# TEST 17: Error Handling - Missing Args
+# TEST 18: Error Handling - Missing Args
 #===========================================
 test_start "gopher alias create (should error)"
 set +e
@@ -309,7 +325,7 @@ else
 fi
 
 #===========================================
-# TEST 18: Error Handling - Reserved Name
+# TEST 19: Error Handling - Reserved Name
 #===========================================
 test_start "gopher alias create system 1.22.0 (should error)"
 set +e

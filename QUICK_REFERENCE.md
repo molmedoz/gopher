@@ -16,6 +16,8 @@
 | `gopher current` | Show active version | `gopher current` |
 | `gopher system` | Show system Go info | `gopher system` |
 | `gopher uninstall <version>` | Remove a version | `gopher uninstall 1.20.0` |
+| `gopher clean` | Remove download cache | `gopher clean` |
+| `gopher purge` | Remove all Gopher data | `gopher purge` |
 | `gopher version` | Show Gopher version | `gopher version` |
 | `gopher help` | Show help | `gopher help` |
 
@@ -47,6 +49,8 @@ gopher system    # See system Go
 ```bash
 gopher list                    # Find versions to remove
 gopher uninstall 1.20.0        # Remove specific version
+gopher clean                   # Clean download cache
+gopher purge                   # Remove all Gopher data (requires confirmation)
 ```
 
 ### Find and Install Latest Version

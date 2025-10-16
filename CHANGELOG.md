@@ -44,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Verbose and quiet modes
   - Interactive setup wizard (`gopher init`)
   - Makefile-based local CI (`make ci`, `make test`, `make lint`)
-  - Shell-based E2E tests (18 scenarios across platforms)
+  - Shell-based E2E tests (19 scenarios across platforms)
   - Comprehensive documentation suite
   - Detailed roadmap with prioritized features
   
@@ -54,7 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   
 ### Technical Improvements
 - **Dependencies**: Uses `golang.org/x/term` for enhanced terminal support
-- **Testing**: 50+ unit tests with 35% coverage + 18 E2E test scenarios
+- **Testing**: 50+ unit tests with 35% coverage + 19 E2E test scenarios
 - **CI/CD**: GitHub Actions workflows for lint, test, build, security, coverage
 - **Architecture**: Modular design with reusable components
 - **Thread Safety**: Mutex-protected concurrent operations in alias manager

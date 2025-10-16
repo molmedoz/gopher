@@ -161,6 +161,12 @@ gopher current
 # Uninstall a Go version
 gopher uninstall 1.20.7
 
+# Clean download cache
+gopher clean
+
+# Remove all Gopher data (requires confirmation)
+gopher purge
+
 # Show detailed help
 gopher help
 ```
@@ -300,6 +306,12 @@ gopher list
 
 # Switch to system Go
 gopher use system
+
+# Clean up download cache
+gopher clean
+
+# If you want to completely remove Gopher (requires confirmation)
+gopher purge
 ```
 
 ### Scripting with JSON

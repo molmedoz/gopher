@@ -15,8 +15,8 @@ Gopher v1.0.0 is **released** with the following capabilities:
 - ✅ JSON output for scripting
 - ✅ **Progress System** (Progress bars, spinners, cross-platform, auto-sizing)
 - ✅ **Makefile-based local CI** (Reproducible tests and builds)
-- ✅ **E2E Testing** (18 shell-based scenarios across platforms)
-- ✅ Comprehensive testing (50+ unit tests, 35% coverage, 18 E2E scenarios)
+- ✅ **E2E Testing** (19 shell-based scenarios across platforms)
+- ✅ Comprehensive testing (50+ unit tests, 35% coverage, 19 E2E scenarios)
 - ✅ Multi-platform builds (Linux, macOS, Windows)
 - ✅ Thread-safe concurrent operations
 
@@ -270,8 +270,9 @@ These features provide high value with minimal implementation effort:
 
 1. **`gopher doctor`** - Health check command
 2. **Better table formatting** - Enhanced `list` output with colors
-3. **`gopher clean`** - Cleanup command
-4. **`gopher verify`** - Installation verification
+3. **`gopher verify`** - Installation verification
+
+**Note:** `gopher clean` and `gopher purge` are already implemented in v1.0.0
 
 ---
 
