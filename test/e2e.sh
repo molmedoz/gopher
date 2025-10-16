@@ -24,7 +24,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # Binary path
 GOPHER_BIN="${PROJECT_ROOT}/build/gopher"
-if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
+if [[ "$OSTYPE" == *"msys"* || "$OSTYPE" == *"cygwin"* || "$OSTYPE" == *"win"* ]]; then
     GOPHER_BIN="${PROJECT_ROOT}/build/gopher.exe"
 fi
 
