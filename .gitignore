@@ -50,6 +50,7 @@ Thumbs.db
 
 # Test artifacts
 test-*
+!.github/workflows/test-matrix.yml
 coverage.out
 coverage.html
 
