@@ -1911,7 +1911,7 @@ func purgeAllData(manager *inruntime.Manager) error {
 	// Ask for confirmation
 	fmt.Print("Type 'yes' to confirm purge: ")
 	var response string
-	fmt.Scanln(&response)
+	_, _ = fmt.Scanln(&response) // Ignore error - empty input is valid (cancellation)
 
 	if strings.ToLower(strings.TrimSpace(response)) != "yes" {
 		fmt.Println("Purge cancelled.")

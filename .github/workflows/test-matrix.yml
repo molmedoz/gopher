@@ -36,8 +36,8 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
 
-      - name: Run unit tests
-        run: go test -v -coverprofile=coverage-${{ matrix.go-version }}-${{ matrix.os }}.out ./...
+      - name: Run unit tests with race detection
+        run: go test -v -race -coverprofile=coverage-${{ matrix.go-version }}-${{ matrix.os }}.out -covermode=atomic ./...
 
       - name: Upload coverage
         uses: actions/upload-artifact@v4
@@ -45,8 +45,13 @@ jobs:
           name: coverage-${{ matrix.go-version }}-${{ matrix.os }}
           path: coverage-${{ matrix.go-version }}-${{ matrix.os }}.out
 
-      - name: Build
-        run: go build -v -o build/gopher${{ matrix.os == 'windows-latest' && '.exe' || '' }} ./cmd/gopher
+      - name: Build with version info
+        run: |
+          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+          COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "none")
+          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          go build -ldflags "-X main.appVersion=$VERSION -X main.appCommit=$COMMIT -X main.appDate=$BUILD_DATE -X main.appBuiltBy=ci -s -w" \
+            -v -o build/gopher${{ matrix.os == 'windows-latest' && '.exe' || '' }} ./cmd/gopher
 
       - name: Run E2E tests
         run: bash test/e2e.sh

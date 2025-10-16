@@ -1,382 +1,281 @@
 # Contributing to Gopher
 
-Thank you for your interest in contributing to Gopher! This document provides guidelines and information for contributors.
+Thank you for your interest in contributing to Gopher! This guide will help you set up your development environment and understand our workflow.
 
-## Table of Contents
+## Prerequisites
 
-- [Code of Conduct](#code-of-conduct)
-- [Getting Started](#getting-started)
-- [Development Process](#development-process)
-- [Pull Request Process](#pull-request-process)
-- [Issue Guidelines](#issue-guidelines)
-- [Coding Standards](#coding-standards)
-- [Testing Guidelines](#testing-guidelines)
-- [Documentation](#documentation)
-
-## Code of Conduct
-
-This project follows the [Contributor Covenant](https://www.contributor-covenant.org/) Code of Conduct. By participating, you are expected to uphold this code.
-
-## Getting Started
-
-### Prerequisites
-
-- Go 1.24.9 or later
+- Go 1.22 or later
 - Git
-- Make (optional, for using Makefile commands)
+- Make
 
-### Setting Up Development Environment
+## Development Environment Setup
 
-1. **Fork the repository**
-   ```bash
-   # Fork on GitHub, then clone your fork
-   git clone https://github.com/your-username/gopher.git
-   cd gopher
-   ```
-
-2. **Set up upstream remote**
-   ```bash
-   git remote add upstream https://github.com/molmedoz/gopher.git
-   ```
-
-3. **Install dependencies**
-   ```bash
-   go mod tidy
-   ```
-
-4. **Install development tools**
-   ```bash
-   make install-tools
-   ```
-
-5. **Run tests**
-   ```bash
-   make test
-   ```
-
-## Development Process
-
-### 1. Create a Feature Branch
+### 1. Clone the Repository
 
 ```bash
-# Create and switch to a new branch
-git checkout -b feature/your-feature-name
-
-# Or for bug fixes
-git checkout -b fix/issue-description
+git clone https://github.com/molmedoz/gopher.git
+cd gopher
 ```
 
-### 2. Make Your Changes
+### 2. Install Development Tools
 
-- Write your code following the [coding standards](#coding-standards)
-- Add tests for new functionality
-- Update documentation as needed
-- Ensure all tests pass
-
-### 3. Test Your Changes
+Gopher uses several development tools for code quality and testing. Install them all with:
 
 ```bash
-# Run all tests
-make test
-
-# Run tests with coverage
-make test-coverage
-
-# Run linting
-make lint
-
-# Run all checks
-make check
+make install-tools
 ```
 
-### 4. Commit Your Changes
+This will install:
+- **goimports** - Automatically format and organize imports
+- **golangci-lint** - Comprehensive linting (multiple linters in one)
+- **gofumpt** - Strict formatting beyond go fmt
 
-Use conventional commit messages:
+### 3. Verify Installation
+
+The Makefile automatically uses the full path to installed tools, so **no PATH configuration is needed!**
 
 ```bash
+# Verify tools are installed
+ls $(go env GOPATH)/bin/ | grep -E "(goimports|golangci-lint)"
+
+# Run a quick check
+make ci
+```
+
+**Note:** If you want to use the tools manually (outside of Make), you can optionally add them to your PATH:
+```bash
+# Optional: Add to your shell profile (~/.bashrc, ~/.zshrc, etc.)
+export PATH="$(go env GOPATH)/bin:$PATH"
+```
+
+## Development Workflow
+
+### Daily Development Cycle
+
+```bash
+# 1. Pull latest changes
+git pull origin main
+
+# 2. Create a feature branch
+git checkout -b feature/my-feature
+
+# 3. Make your changes...
+
+# 4. Format code and imports (auto-fix)
+make format
+
+# 5. Run CI checks locally (matches GitHub Actions)
+make ci
+
+# 6. If all checks pass, commit your changes
 git add .
-git commit -m "feat: add new feature description"
+git commit -m "feat: add my feature"
+
+# 7. Push and create PR
+git push origin feature/my-feature
 ```
 
-**Commit Message Format:**
-- `feat:` - New features
-- `fix:` - Bug fixes
-- `docs:` - Documentation changes
-- `style:` - Code style changes (formatting, etc.)
-- `refactor:` - Code refactoring
-- `test:` - Adding or updating tests
-- `chore:` - Maintenance tasks
+**Pro Tip:** Running `make ci` before pushing ensures your PR will pass all GitHub Actions checks!
 
-### 5. Push and Create Pull Request
+### Quick Commands
 
 ```bash
-git push origin feature/your-feature-name
+# Format code
+make fmt            # go fmt only
+make imports        # goimports only
+make format         # both fmt and imports (auto-fix)
+
+# Check code (CI mode - no modifications)
+make check-format   # check code format
+make check-imports  # check imports format
+
+# Testing
+make test           # run tests with race detection and coverage
+make test-verbose   # verbose output
+make test-coverage  # detailed coverage report
+
+# Quality checks
+make vet            # go vet
+make lint           # golangci-lint
+make check          # fmt + vet + test (modifies files)
+make ci             # check-format + check-imports + vet + lint + test (CI mode)
+
+# Build
+make build          # build for current platform
+make build-all      # build for all platforms
+
+# Complete cycle
+make dev            # fmt + vet + test + build
 ```
 
-Then create a pull request on GitHub.
+## Code Quality Standards
+
+### Formatting
+
+- Use `goimports` for import organization
+- Use `go fmt` for code formatting
+- Run `make format` before committing
+
+### Linting
+
+- All code must pass `golangci-lint`
+- Run `make lint` before committing
+- Fix all warnings and errors
+
+### Testing
+
+- Write tests for new features
+- Maintain or improve test coverage
+- All tests must pass: `make test`
+- Coverage reports: `make test-coverage`
+
+## Dependency Policy
+
+**IMPORTANT**: Gopher uses ONLY Go standard library and official Go extended packages.
+
+### Allowed Dependencies
+
+✅ **Go Standard Library** (all packages)
+✅ **golang.org/x/*** - Official Go extended packages only
+
+### NOT Allowed
+
+❌ Third-party libraries (github.com/*, gopkg.in/*, etc.)
+❌ External dependencies (except official Go extensions)
+
+### Adding Dependencies
+
+If you need to add a dependency:
+
+1. **Check if it's in stdlib first**
+2. **Check if golang.org/x/*** has a solution**
+3. **Only then**, discuss with maintainers
+
+Currently, Gopher uses:
+- `golang.org/x/term` - Terminal handling (progress bars, TTY detection)
+- `golang.org/x/sys` - Low-level system calls (indirect dependency)
+
+## Testing
+
+### Run All Tests
+
+```bash
+make test
+```
+
+### Run Tests with Coverage
+
+```bash
+make test-coverage
+# Open coverage.html in browser
+```
+
+### Run E2E Tests
+
+```bash
+# Run in Docker (safe, doesn't affect your system)
+cd test
+bash e2e.sh
+```
+
+### Run Specific Tests
+
+```bash
+go test -v -run TestClean ./internal/runtime/
+go test -v -run TestPurge ./internal/runtime/
+```
+
+## Commit Message Format
+
+We follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+### Types
+
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation only
+- `style`: Formatting, missing semicolons, etc.
+- `refactor`: Code change that neither fixes a bug nor adds a feature
+- `perf`: Performance improvement
+- `test`: Adding missing tests
+- `chore`: Changes to build process or auxiliary tools
+
+### Examples
+
+```
+feat: add clean command to remove download cache
+
+Implement gopher clean command that removes downloaded Go archives
+to free disk space. The command shows human-readable size of freed
+space.
+
+Closes #123
+```
+
+```
+fix: correct version detection on Windows
+
+Fix bug where Windows system Go was not detected correctly due to
+incorrect path handling.
+```
 
 ## Pull Request Process
 
-### Before Submitting
+1. **Fork** the repository
+2. **Create** a feature branch
+3. **Make** your changes
+4. **Test** thoroughly (`make check`)
+5. **Format** code (`make format`)
+6. **Lint** code (`make lint`)
+7. **Commit** with conventional commit messages
+8. **Push** to your fork
+9. **Create** a Pull Request
 
-- [ ] Code follows Go conventions and project style
-- [ ] Tests are added/updated and passing
-- [ ] Documentation is updated
-- [ ] No breaking changes (or properly documented)
-- [ ] Commit messages follow conventional format
-- [ ] Branch is up to date with main
+### PR Checklist
 
-### Pull Request Template
-
-When creating a pull request, please include:
-
-1. **Description**: What does this PR do?
-2. **Type**: Feature, Bug Fix, Documentation, etc.
-3. **Testing**: How was this tested?
-4. **Breaking Changes**: Any breaking changes?
-5. **Related Issues**: Link to related issues
-
-### Review Process
-
-1. **Automated Checks**: CI will run tests and linting
-2. **Code Review**: Maintainers will review your code
-3. **Feedback**: Address any feedback or requested changes
-4. **Approval**: Once approved, your PR will be merged
-
-## Issue Guidelines
-
-### Before Creating an Issue
-
-1. Check existing issues to avoid duplicates
-2. Search closed issues for similar problems
-3. Check the documentation for solutions
-
-### Issue Types
-
-- **Bug Report**: Something isn't working
-- **Feature Request**: New functionality
-- **Documentation**: Documentation improvements
-- **Question**: General questions
-
-### Bug Report Template
-
-```markdown
-**Describe the bug**
-A clear description of what the bug is.
-
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Run command '...'
-2. See error
-
-**Expected behavior**
-What you expected to happen.
-
-**Environment:**
-- OS: [e.g. macOS, Linux, Windows]
-- Go version: [e.g. 1.21.0]
-- Gopher version: [e.g. 1.0.0]
-
-**Additional context**
-Any other context about the problem.
-```
-
-### Feature Request Template
-
-```markdown
-**Is your feature request related to a problem?**
-A clear description of what the problem is.
-
-**Describe the solution you'd like**
-A clear description of what you want to happen.
-
-**Describe alternatives you've considered**
-Alternative solutions or workarounds.
-
-**Additional context**
-Any other context about the feature request.
-```
-
-## Coding Standards
-
-### Go Code Style
-
-Follow standard Go conventions:
-
-```go
-// Package comment
-package version
-
-import (
-    "fmt"
-    "time"
-)
-
-// Interface comment
-type ManagerInterface interface {
-    // Method comment
-    ListInstalled() ([]Version, error)
-}
-
-// Struct comment
-type Version struct {
-    Version     string    `json:"version"`      // Field comment
-    OS          string    `json:"os"`           // Field comment
-    InstalledAt time.Time `json:"installed_at"`
-}
-
-// Method comment
-func (v Version) String() string {
-    return fmt.Sprintf("%s (%s/%s)", v.Version, v.OS, v.Arch)
-}
-```
-
-### Naming Conventions
-
-- **Packages**: lowercase, single word
-- **Interfaces**: descriptive name ending with `-er`
-- **Structs**: PascalCase
-- **Functions**: PascalCase for public, camelCase for private
-- **Variables**: camelCase
-
-### Error Handling
-
-Always handle errors explicitly:
-
-```go
-// Good
-func (m *Manager) Install(version string) error {
-    if err := ValidateVersion(version); err != nil {
-        return fmt.Errorf("invalid version: %w", err)
-    }
-    // ... rest of implementation
-}
-
-// Bad
-func (m *Manager) Install(version string) error {
-    ValidateVersion(version) // Error ignored
-    // ... rest of implementation
-}
-```
-
-### Documentation
-
-- Document all public APIs
-- Use clear, concise comments
-- Include examples for complex functions
-- Update documentation when changing APIs
-
-## Testing Guidelines
-
-### Test Structure
-
-```go
-func TestFunctionName(t *testing.T) {
-    tests := []struct {
-        name     string
-        input    InputType
-        expected OutputType
-        wantErr  bool
-    }{
-        {
-            name:     "valid input",
-            input:    validInput,
-            expected: expectedOutput,
-            wantErr:  false,
-        },
-        {
-            name:     "invalid input",
-            input:    invalidInput,
-            expected: nil,
-            wantErr:  true,
-        },
-    }
-
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            result, err := FunctionName(tt.input)
-            if (err != nil) != tt.wantErr {
-                t.Errorf("FunctionName() error = %v, wantErr %v", err, tt.wantErr)
-                return
-            }
-            if result != tt.expected {
-                t.Errorf("FunctionName() = %v, want %v", result, tt.expected)
-            }
-        })
-    }
-}
-```
-
-### Test Coverage
-
-- Aim for high test coverage (>80%)
-- Test both success and error cases
-- Test edge cases and boundary conditions
-- Use table-driven tests for multiple scenarios
-
-### Integration Tests
-
-For integration tests that require external resources:
-
-```go
-func TestIntegration(t *testing.T) {
-    if testing.Short() {
-        t.Skip("skipping integration test")
-    }
-    
-    // Integration test code
-}
-```
-
-Run with: `go test -short ./...` (skips integration tests)
+- [ ] Code is formatted (`make format`)
+- [ ] All tests pass (`make test`)
+- [ ] Linter passes (`make lint`)
+- [ ] No new dependencies (or discussed with maintainers)
+- [ ] Documentation updated (if needed)
+- [ ] CHANGELOG.md updated (if needed)
+- [ ] Commit messages follow convention
+- [ ] PR description explains the change
 
 ## Documentation
 
-### User Documentation
+Update documentation when:
 
-- Update [USER_GUIDE.md](docs/USER_GUIDE.md) for user-facing changes
-- Add examples to [EXAMPLES.md](docs/EXAMPLES.md)
-- Update README.md for major features
+- Adding new commands
+- Changing behavior
+- Adding configuration options
+- Fixing bugs that affect user experience
 
-### API Documentation
-
-- Update [API_REFERENCE.md](docs/API_REFERENCE.md) for API changes
-- Include method signatures and examples
-- Document any breaking changes
-
-### Developer Documentation
-
-- Update [DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) for development process changes
-- Document new build requirements or tools
-
-## Release Process
-
-### Version Bumping
-
-- **Major**: Breaking changes
-- **Minor**: New features (backward compatible)
-- **Patch**: Bug fixes (backward compatible)
-
-### Release Checklist
-
-- [ ] Update version in `cmd/gopher/main.go`
-- [ ] Update CHANGELOG.md
-- [ ] Run full test suite
-- [ ] Update documentation
-- [ ] Create release tag
-- [ ] Build and test release binaries
+Documentation files:
+- `README.md` - Main documentation
+- `QUICK_REFERENCE.md` - Quick reference guide
+- `docs/USER_GUIDE.md` - Comprehensive user guide
+- `docs/ROADMAP.md` - Future plans
+- `CHANGELOG.md` - Version history
 
 ## Getting Help
 
-- **GitHub Issues**: For bugs and feature requests
-- **GitHub Discussions**: For questions and general discussion
-- **Code Review**: Ask questions in pull request comments
+- **Issues**: [GitHub Issues](https://github.com/molmedoz/gopher/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/molmedoz/gopher/discussions)
+- **Email**: molmedozazo@gmail.com
 
-## Recognition
+## Code of Conduct
 
-Contributors will be recognized in:
-- CONTRIBUTORS.md file
-- Release notes
-- GitHub contributors list
+Be respectful, inclusive, and constructive. We're all here to build something great together!
 
-Thank you for contributing to Gopher! 🎉
+## License
+
+By contributing, you agree that your contributions will be licensed under the MIT License.

@@ -45,19 +45,22 @@ make build
 
 | Command | Description | Race Detection | Time |
 |---------|-------------|----------------|------|
-| `make test` | Tests + coverage | ❌ No | ~9s |
+| `make test` | Tests + coverage + race detection | ✅ Yes | ~18s |
 | `make test-verbose` | Verbose output | ❌ No | ~9s |
-| `make test-race` | With race detection | ✅ Yes | ~18s |
+| `make test-coverage` | Detailed coverage report | ✅ Yes | ~18s |
 
-**Recommendation**: Use `make test` for fast feedback, `make test-race` when working on concurrent code.
+**Note**: All tests now include race detection by default (matches CI behavior).
 
 **Example**:
 ```bash
-# Fast test
+# Run tests (includes race detection and coverage)
 make test
 
-# Comprehensive (check for race conditions)
-make test-race
+# Verbose output
+make test-verbose
+
+# Detailed coverage report
+make test-coverage
 ```
 
 ---
@@ -67,30 +70,36 @@ make test-race
 #### **Formatting**:
 | Command | Description | Fixes Issues |
 |---------|-------------|--------------|
-| `make fmt` | Format code | ✅ Yes |
-| `make fmt-check` | Check formatting | ❌ No (CI mode) |
+| `make fmt` | Format code with go fmt | ✅ Yes |
+| `make check-format` | Check formatting (CI mode) | ❌ No |
 
 #### **Imports**:
 | Command | Description | Fixes Issues |
 |---------|-------------|--------------|
-| `make imports` | Fix imports | ✅ Yes |
-| `make imports-check` | Check imports | ❌ No (CI mode) |
+| `make imports` | Fix imports with goimports | ✅ Yes |
+| `make check-imports` | Check imports (CI mode) | ❌ No |
+
+#### **Combined**:
+| Command | Description | Includes |
+|---------|-------------|----------|
+| `make format` | Format code and imports | fmt + imports |
 
 #### **Linting**:
 | Command | Description | Time |
 |---------|-------------|------|
-| `make staticcheck` | Run staticcheck | ~3s |
 | `make lint` | Run golangci-lint | ~8s |
-| `make lint-ci` | All lint checks | ~6s |
 | `make vet` | Run go vet | ~2s |
 
 **Example**:
 ```bash
-# Fix formatting and imports
-make fmt imports
+# Fix formatting and imports (comprehensive)
+make format
 
-# Check if ready for CI
-make lint-ci
+# Check without modifying (CI mode)
+make check-format check-imports
+
+# Run linter
+make lint
 ```
 
 ---
@@ -99,28 +108,27 @@ make lint-ci
 
 | Command | Description | Includes | Time |
 |---------|-------------|----------|------|
-| `make ci` | **ALL CI checks** | lint + vet + test + build | ~20s |
-| `make ci-race` | CI with race detection | lint + vet + test-race + build | ~40s |
+| `make ci` | **ALL CI checks** (matches GitHub Actions) | check-format + check-imports + vet + lint + test | ~20s |
+| `make check` | Development checks (modifies files) | fmt + vet + test | ~18s |
 
-**Recommendation**: Use `make ci` before every push.
+**Recommendation**: Use `make ci` before every push to ensure GitHub Actions will pass.
 
-**What it runs**:
-1. ✅ Format check
-2. ✅ Import check
-3. ✅ Staticcheck
-4. ✅ Go vet
-5. ✅ Tests with coverage
-6. ✅ Build
+**What `make ci` runs**:
+1. ✅ Check code format (no modifications)
+2. ✅ Check imports (no modifications)
+3. ✅ Go vet
+4. ✅ Golangci-lint
+5. ✅ Tests with race detection and coverage
 
 **Example**:
 ```bash
-# Before committing
+# Before committing - run CI checks locally
 make ci
 
-# If all green:
+# If all green, you're ready to push:
 git add .
 git commit -m "feat: add feature"
-git push
+git push  # ✅ GitHub Actions will pass!
 ```
 
 ---

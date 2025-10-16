@@ -7,7 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-*No unreleased changes yet*
+### Added
+- **Development Tools**
+  - `make install-tools` - Automatically install goimports, golangci-lint, and gofumpt
+  - `make check-format` - Check code format without modifying (CI mode)
+  - `make check-imports` - Check imports without modifying (CI mode)
+  - `make ci` - Run complete CI workflow locally (matches GitHub Actions)
+  - Automatic tool path resolution (no PATH configuration needed)
+
+### Changed
+- **Testing**: Added `-race` flag to all tests by default for race condition detection
+- **Makefile**: Tools now use full paths from GOPATH/bin (no PATH setup required)
+- **CI/CD**: Added version injection to all GitHub Actions builds
+- **CI/CD**: Added race detection to all test workflows
+- **Documentation**: Updated all guides for new workflow and CI parity
+
+### Fixed
+- Linter error in `cmd/gopher/main.go`: Added error handling for `fmt.Scanln`
+- golangci-lint version compatibility (now uses @latest)
 
 ## [1.0.0] - 2025-10-15
 
