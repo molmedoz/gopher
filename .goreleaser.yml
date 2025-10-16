@@ -188,6 +188,9 @@ release:
     **Thank you for using Gopher!** 🎉
 
 # Homebrew Tap
+# NOTE: Disabled until molmedoz/homebrew-tap repository is created
+# To enable: Create repo with 'gh repo create molmedoz/homebrew-tap --public'
+# Then set skip_upload: false
 brews:
   - name: gopher
     
@@ -217,8 +220,8 @@ brews:
     # License
     license: "MIT"
     
-    # Skip upload if true
-    skip_upload: false
+    # Skip upload until tap repo is created
+    skip_upload: true
     
     # Install script
     install: |
@@ -242,6 +245,12 @@ brews:
         https://molmedoz.github.io/gopher/
 
 # Chocolatey packages
+# NOTE: Disabled until CHOCOLATEY_API_KEY is set in GitHub Secrets
+# To enable:
+# 1. Create account at https://community.chocolatey.org/
+# 2. Get API key from account settings
+# 3. Add to GitHub Secrets: gh secret set CHOCOLATEY_API_KEY
+# 4. Set skip_publish: false
 chocolateys:
   - name: gopher
     
@@ -253,7 +262,7 @@ chocolateys:
     # URLs
     project_url: https://github.com/molmedoz/gopher
     url_template: "https://github.com/molmedoz/gopher/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-    icon_url: 'https://raw.githubusercontent.com/molmedoz/gopher/main/build/gopher-icon.png'
+    icon_url: 'https://raw.githubusercontent.com/molmedoz/gopher/main/gopher.jpeg'
     license_url: https://github.com/molmedoz/gopher/blob/main/LICENSE
     require_license_acceptance: false
     project_source_url: https://github.com/molmedoz/gopher
@@ -289,15 +298,22 @@ chocolateys:
     # Source repository
     source_repo: "https://push.chocolatey.org/"
     
-    # Skip publish (set to false to publish)
-    skip_publish: false
+    # Skip publish until API key is configured
+    skip_publish: true
 
 # Snapcraft
+# NOTE: Disabled until SNAPCRAFT_STORE_CREDENTIALS is set in GitHub Secrets
+# To enable:
+# 1. Register at https://snapcraft.io/
+# 2. Register app name "gopher"
+# 3. Export credentials: snapcraft export-login --snaps gopher --channels stable -
+# 4. Add to GitHub Secrets: gh secret set SNAPCRAFT_STORE_CREDENTIALS
+# 5. Set publish: true
 snapcrafts:
   - name: gopher
     
-    # Publish to Snap Store
-    publish: true
+    # Publish to Snap Store (disabled until configured)
+    publish: false
     
     # Summary (max 79 chars)
     summary: A simple, fast, and dependency-free Go version manager
