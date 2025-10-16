@@ -220,8 +220,8 @@ brews:
     # License
     license: "MIT"
     
-    # Skip upload until tap repo is created
-    skip_upload: true
+    # Tap repo exists - enable publishing
+    skip_upload: false
     
     # Install script
     install: |
