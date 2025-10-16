@@ -308,6 +308,39 @@ gopher install 1.21.0
 gopher use 1.21.0
 ```
 
+### Q: Go is automatically downloading toolchains and overriding my PATH. How do I prevent this?
+
+**A:** Go 1.21+ has automatic toolchain management that can download newer Go versions when your `go.mod` requires them. To prevent this behavior:
+
+**Option 1: Set GOTOOLCHAIN=local (Recommended)**
+```bash
+# Add to your shell profile (~/.bashrc, ~/.zshrc, etc.)
+export GOTOOLCHAIN=local
+
+# Apply immediately
+source ~/.bashrc  # or ~/.zshrc
+```
+
+This tells Go to only use your locally installed version and never auto-download.
+
+**Option 2: Align go.mod with installed Go version**
+```bash
+# Check your installed Go version
+go version  # e.g., go version go1.24.9
+
+# Update go.mod to match
+# Change: go 1.25.1
+# To: go 1.24.9
+```
+
+**Why this happens:**
+- Go automatically downloads toolchains when `go.mod` requires a newer version
+- These downloads go to `$GOPATH/pkg/mod/golang.org/toolchain@.../`
+- The downloaded toolchain is prepended to PATH for that process
+- IDEs like Cursor may inherit this behavior
+
+**More info:** See [Go toolchain documentation](https://go.dev/doc/toolchain)
+
 ### Q: How do I script with Gopher?
 
 **A:** Use JSON output for easy parsing:

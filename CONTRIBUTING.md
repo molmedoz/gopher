@@ -21,7 +21,7 @@ This project follows the [Contributor Covenant](https://www.contributor-covenant
 
 ### Prerequisites
 
-- Go 1.21 or later
+- Go 1.24.9 or later
 - Git
 - Make (optional, for using Makefile commands)
 
