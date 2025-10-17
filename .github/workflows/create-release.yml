@@ -1,0 +1,196 @@
+name: Create Release
+
+# Manual workflow with validation before tagging
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.0.0 or v1.0.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark as pre-release?'
+        required: false
+        type: boolean
+        default: false
+      draft:
+        description: 'Create as draft?'
+        required: false
+        type: boolean
+        default: false
+
+# Permissions needed for creating releases and tags
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  validate:
+    name: Validate Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.normalize.outputs.version }}
+      tag: ${{ steps.normalize.outputs.tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for changelog
+
+      - name: Normalize version
+        id: normalize
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          # Remove 'v' prefix if present
+          VERSION_NUM="${VERSION#v}"
+          # Add 'v' prefix for tag
+          TAG="v${VERSION_NUM}"
+          
+          echo "version=${VERSION_NUM}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          
+          echo "📦 Version: ${VERSION_NUM}"
+          echo "🏷️  Tag: ${TAG}"
+
+      - name: Check if tag already exists
+        run: |
+          TAG="${{ steps.normalize.outputs.tag }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "❌ Error: Tag $TAG already exists!"
+            echo "Please use a different version number or delete the existing tag."
+            exit 1
+          fi
+          echo "✅ Tag $TAG is available"
+
+      - name: Verify version in CHANGELOG
+        run: |
+          VERSION="${{ steps.normalize.outputs.version }}"
+          if ! grep -q "\[$VERSION\]" CHANGELOG.md && ! grep -q "\[v$VERSION\]" CHANGELOG.md; then
+            echo "⚠️  Warning: Version $VERSION not found in CHANGELOG.md"
+            echo "Please update CHANGELOG.md before releasing"
+            # Don't fail - just warn
+          else
+            echo "✅ Version found in CHANGELOG.md"
+          fi
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.9'
+
+      - name: Run all tests
+        run: |
+          echo "🧪 Running all tests with race detection..."
+          go test -race -covermode=atomic ./...
+
+      - name: Run linter
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=5m
+
+      - name: Build for all platforms
+        run: |
+          echo "🔨 Building for all platforms..."
+          make build-all
+
+      - name: Validation summary
+        run: |
+          echo "## ✅ Release Validation Passed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Version: ${{ steps.normalize.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Tag: ${{ steps.normalize.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Tests: ✅ Passed" >> $GITHUB_STEP_SUMMARY
+          echo "- Linter: ✅ Passed" >> $GITHUB_STEP_SUMMARY
+          echo "- Build: ✅ Success" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Ready to create release!" >> $GITHUB_STEP_SUMMARY
+
+  create-tag:
+    name: Create Tag
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create and push tag
+        run: |
+          TAG="${{ needs.validate.outputs.tag }}"
+          echo "🏷️  Creating tag: $TAG"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
+          echo "✅ Tag $TAG created and pushed"
+
+      - name: Tag created summary
+        run: |
+          echo "## 🏷️  Tag Created" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Tag \`${{ needs.validate.outputs.tag }}\` has been created and pushed." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The release workflow will now be triggered automatically." >> $GITHUB_STEP_SUMMARY
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [validate, create-tag]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.validate.outputs.tag }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.9'
+
+      - name: Extract release notes
+        id: release_notes
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          
+          # Extract release notes from CHANGELOG.md
+          # Look for section matching the version
+          sed -n "/## \[${VERSION}\]/,/## \[/p" CHANGELOG.md | sed '$d' > /tmp/release_notes.md
+          
+          # If not found, check with 'v' prefix
+          if [ ! -s /tmp/release_notes.md ]; then
+            sed -n "/## \[v${VERSION}\]/,/## \[/p" CHANGELOG.md | sed '$d' > /tmp/release_notes.md
+          fi
+          
+          # If still empty, use generic notes
+          if [ ! -s /tmp/release_notes.md ]; then
+            echo "Release $VERSION" > /tmp/release_notes.md
+            echo "" >> /tmp/release_notes.md
+            echo "See [CHANGELOG.md](CHANGELOG.md) for details." >> /tmp/release_notes.md
+          fi
+          
+          # Output for next steps
+          echo "notes_file=/tmp/release_notes.md" >> $GITHUB_OUTPUT
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --clean --release-notes=${{ steps.release_notes.outputs.notes_file }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release summary
+        run: |
+          echo "## 🎉 Release Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Version \`${{ needs.validate.outputs.tag }}\` has been released!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "View release: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+

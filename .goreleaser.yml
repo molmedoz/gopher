@@ -188,6 +188,9 @@ release:
     **Thank you for using Gopher!** 🎉
 
 # Homebrew Tap
+# NOTE: Disabled until molmedoz/homebrew-tap repository is created
+# To enable: Create repo with 'gh repo create molmedoz/homebrew-tap --public'
+# Then set skip_upload: false
 brews:
   - name: gopher
     
@@ -217,7 +220,7 @@ brews:
     # License
     license: "MIT"
     
-    # Skip upload if true
+    # Tap repo exists - enable publishing
     skip_upload: false
     
     # Install script
@@ -242,6 +245,12 @@ brews:
         https://molmedoz.github.io/gopher/
 
 # Chocolatey packages
+# NOTE: Disabled until CHOCOLATEY_API_KEY is set in GitHub Secrets
+# To enable:
+# 1. Create account at https://community.chocolatey.org/
+# 2. Get API key from account settings
+# 3. Add to GitHub Secrets: gh secret set CHOCOLATEY_API_KEY
+# 4. Set skip_publish: false
 chocolateys:
   - name: gopher
     
@@ -253,7 +262,7 @@ chocolateys:
     # URLs
     project_url: https://github.com/molmedoz/gopher
     url_template: "https://github.com/molmedoz/gopher/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-    icon_url: 'https://raw.githubusercontent.com/molmedoz/gopher/main/build/gopher-icon.png'
+    icon_url: 'https://raw.githubusercontent.com/molmedoz/gopher/main/gopher.jpeg'
     license_url: https://github.com/molmedoz/gopher/blob/main/LICENSE
     require_license_acceptance: false
     project_source_url: https://github.com/molmedoz/gopher
@@ -289,15 +298,28 @@ chocolateys:
     # Source repository
     source_repo: "https://push.chocolatey.org/"
     
-    # Skip publish (set to false to publish)
+    # API key is configured - enable publishing
     skip_publish: false
 
 # Snapcraft
+# NOTE: Disabled - "gopher" name is on Snapcraft's reserved/sensitive names list
+# Status: Pending approval from Snapcraft team for name usage
+# The name is available but requires manual approval due to potential conflicts
+# 
+# To enable after approval is granted:
+# 1. Wait for Snapcraft team approval email
+# 2. Register "gopher" name at https://dashboard.snapcraft.io/register-snap/
+# 3. Install snapcraft CLI: brew install snapcraft
+# 4. Login: snapcraft login
+# 5. Export credentials: snapcraft export-login --snaps gopher --channels stable - > creds.txt
+# 6. Add to GitHub Secrets: gh secret set SNAPCRAFT_STORE_CREDENTIALS < creds.txt
+# 7. Set publish: true
+# 8. Release next version (v1.0.1 or v1.1.0)
 snapcrafts:
   - name: gopher
     
-    # Publish to Snap Store
-    publish: true
+    # Publish to Snap Store (disabled - pending name approval)
+    publish: false
     
     # Summary (max 79 chars)
     summary: A simple, fast, and dependency-free Go version manager

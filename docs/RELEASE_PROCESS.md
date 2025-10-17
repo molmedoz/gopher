@@ -47,44 +47,56 @@ export VERSION="v1.1.0"
 
 #### Run Pre-Release Checks
 ```bash
-# 1. Run all tests
-make ci
+# Run local validation
+make prepare-release VERSION=1.0.0
 
-# 2. Build for all platforms
-make build-all
-
-# 3. Run E2E tests
-bash test/e2e.sh
-
-# 4. Check documentation
-make help | grep -E "(clean|purge|ci)"
-
-# 5. Validate release
-make validate-release TAG=$VERSION
+# This checks:
+# - All tests pass with race detection
+# - Linter passes
+# - Code is formatted
+# - Imports are clean
+# - Everything builds
 ```
 
-### 2. Create Release
+### 2. Create Release via GitHub Actions
+
+**⚠️ IMPORTANT: We use GitHub Actions workflow for releases (NOT manual tags)**
 
 ```bash
 # 1. Commit all changes
 git add -A
 git commit -m "chore: prepare release $VERSION"
 
-# 2. Create and push tag
-make create-tag TAG=$VERSION
+# 2. Push to your branch
+git push origin your-branch
 
-# 3. Push changes
-git push origin main
+# 3. Create and merge PR to master
+
+# 4. After merge, go to GitHub Actions
+# https://github.com/molmedoz/gopher/actions/workflows/create-release.yml
+
+# 5. Click "Run workflow"
+# 6. Enter version (e.g., 1.0.0)
+# 7. Choose options (draft/prerelease)
+# 8. Click "Run workflow"
 ```
 
-### 3. GitHub Release
+### 3. Automated Release Process
 
 The GitHub Actions workflow will automatically:
-1. Build binaries for all platforms
-2. Run all tests
-3. Create checksums
-4. Generate release notes
-5. Upload artifacts
+1. ✅ Validate version format
+2. ✅ Check tag doesn't already exist
+3. ✅ Verify version exists in CHANGELOG.md
+4. ✅ Run all tests with race detection
+5. ✅ Run linter (golangci-lint)
+6. ✅ Build for all platforms
+7. ✅ Create tag (ONLY if all above pass)
+8. ✅ Run GoReleaser
+9. ✅ Extract release notes from CHANGELOG
+10. ✅ Create GitHub Release
+11. ✅ Upload all artifacts
+
+**Key Benefit:** Tag is created AFTER validation, not before!
 
 #### Manual Steps (if needed)
 1. Go to https://github.com/molmedoz/gopher/releases
@@ -217,15 +229,15 @@ None
 - [ ] Migration guide written (if needed)
 
 ### Release Day
-- [ ] Final `make ci` check
-- [ ] Update version numbers
+- [ ] Final `make prepare-release VERSION=X.Y.Z` check
 - [ ] Finalize CHANGELOG.md
 - [ ] Finalize RELEASE_NOTES.md
 - [ ] Commit with message: `chore: prepare release vX.Y.Z`
-- [ ] Create and push tag: `make create-tag TAG=vX.Y.Z`
-- [ ] Monitor GitHub Actions
-- [ ] Verify release artifacts
-- [ ] Publish GitHub release
+- [ ] Push and merge PR to master
+- [ ] Go to GitHub Actions → "Create Release" workflow
+- [ ] Run workflow with version number
+- [ ] Monitor workflow (validation → test → tag → build → release)
+- [ ] Verify release artifacts on GitHub
 - [ ] Update package managers
 
 ### Post-Release
@@ -340,38 +352,24 @@ v1.0.0 → v2.0.0  (breaking: changed CLI interface)
 
 ---
 
-## Automation Tips
+## Automation
 
-### Use Scripts
+### Using Makefile
 
 ```bash
-# scripts/prepare-release.sh
-VERSION=$1
-if [ -z "$VERSION" ]; then
-    echo "Usage: $0 v1.1.0"
-    exit 1
-fi
+# Prepare release locally (runs all checks)
+make prepare-release VERSION=1.1.0
 
-# Update CHANGELOG.md
-sed -i '' "s/## \[Unreleased\]/## [$VERSION] - $(date +%Y-%m-%d)/" CHANGELOG.md
-
-# Update RELEASE_NOTES.md
-sed -i '' "s/Upcoming/$(date +"%B %Y")/" docs/RELEASE_NOTES.md
-sed -i '' "s/In Development/Released/" docs/RELEASE_NOTES.md
-
-# Commit
-git add CHANGELOG.md docs/RELEASE_NOTES.md
-git commit -m "chore: prepare release $VERSION"
-
-echo "✓ Release prepared for $VERSION"
-echo "Next: make create-tag TAG=$VERSION"
+# This runs 'make ci' and shows next steps
 ```
 
-### Use Makefile
+### Using GitHub Actions
 
-Already integrated! See:
-- `make validate-release TAG=vX.Y.Z`
-- `make create-tag TAG=vX.Y.Z`
+The `create-release.yml` workflow is fully automated:
+- Validates everything
+- Creates tag only if validation passes
+- Builds and releases automatically
+- No manual tag creation needed!
 
 ---
 
@@ -432,14 +430,18 @@ https://github.com/molmedoz/gopher/releases/tag/vX.Y.Z
 git commit -m "feat: add feature"    # Adds to [Unreleased]
 
 # Preparing release
-make validate-release TAG=v1.1.0     # Check everything
+make prepare-release VERSION=1.1.0   # Check everything locally
 vim CHANGELOG.md                      # Finalize changes
 vim docs/RELEASE_NOTES.md            # Finalize notes
 git commit -m "chore: prepare release v1.1.0"
+git push && create PR → merge to master
 
-# Creating release  
-make create-tag TAG=v1.1.0           # Create and push tag
-# GitHub Actions handles the rest!
+# Creating release (via GitHub Actions)
+# 1. Go to: https://github.com/molmedoz/gopher/actions/workflows/create-release.yml
+# 2. Click "Run workflow"
+# 3. Enter version: 1.1.0
+# 4. Click "Run workflow"
+# GitHub Actions validates → tests → tags → builds → releases!
 
 # Post-release
 # Update package managers

@@ -1,8 +1,8 @@
 # GitHub Sponsors configuration for Gopher
 # This adds a "Sponsor" button to the repository
 
-# Uncomment when approved for GitHub Sponsors program
-# github: [molmedoz]
+# Approved for GitHub Sponsors program ✅
+github: [molmedoz]
 
 # Optional: Add other funding platforms when ready
 # patreon: username
