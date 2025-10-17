@@ -379,21 +379,18 @@ gopher --config /path/to/config.json list
 
 If Gopher has been helpful to you, consider supporting its development!
 
-<!-- 
-When approved for GitHub Sponsors, uncomment this badge:
 [![Sponsor Gopher](https://img.shields.io/badge/Sponsor-Gopher-pink?style=for-the-badge&logo=github)](https://github.com/sponsors/molmedoz)
--->
 
-**GitHub Sponsors coming soon!** We're applying to the GitHub Sponsors program to make it easy for you to support Gopher's development.
+**Support Gopher's development** through GitHub Sponsors! Your sponsorship helps maintain this free, open-source tool.
 
-In the meantime, you can support this project by:
+You can also support this project by:
 - ⭐ **Starring the repository** on GitHub
 - 🐛 **Reporting bugs** and issues
 - 💡 **Suggesting features** and improvements
 - 📝 **Contributing** code or documentation
 - 📢 **Sharing** Gopher with others
 
-Your support (code, feedback, or future sponsorship) helps:
+Your support (code, feedback, or sponsorship) helps:
 - 🔧 Maintain and improve Gopher
 - 🐛 Fix bugs and add new features
 - 📚 Create better documentation
@@ -433,5 +430,5 @@ MIT License - see [LICENSE](LICENSE) file for details.
   
   **Created with ❤️ by [molmedoz](https://github.com/molmedoz)**
   
-  *GitHub Sponsors coming soon! Star ⭐ the repo to show your support!*
+  *[Sponsor ♥](https://github.com/sponsors/molmedoz) | Star ⭐ | [Contribute](CONTRIBUTING.md)*
 </div>
