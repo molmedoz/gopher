@@ -441,7 +441,7 @@ security-tools: ## Install security tools
 	@echo "$(BLUE)Installing security tools...$(NC)"
 	@$(GOINSTALL) golang.org/x/vuln/cmd/govulncheck@latest
 	@$(GOINSTALL) honnef.co/go/tools/cmd/staticcheck@latest
-	@echo "$(YELLOW)Note: gosec installation skipped due to repository access issues$(NC)"
+	@$(GOINSTALL) github.com/securego/gosec/v2/cmd/gosec@latest
 	@echo "$(GREEN)✅ Security tools installed$(NC)"
 
 .PHONY: security-scan
@@ -452,6 +452,12 @@ security-scan: ## Run security scan
 		$(GOBIN)/staticcheck ./...; \
 	else \
 		echo "$(YELLOW)Warning: staticcheck not installed, skipping$(NC)"; \
+	fi
+	@if [ -f "$(GOBIN)/gosec" ]; then \
+		echo "$(YELLOW)Running gosec...$(NC)"; \
+		$(GOBIN)/gosec ./...; \
+	else \
+		echo "$(YELLOW)Warning: gosec not installed, skipping$(NC)"; \
 	fi
 	@echo "$(YELLOW)Running go vet...$(NC)"
 	@go vet ./...

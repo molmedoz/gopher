@@ -36,7 +36,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.21'
+        go-version: '1.24'
         cache: true
 
     - name: Install security tools
@@ -88,7 +88,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.21'
+        go-version: '1.24'
         cache: true
 
     - name: Install govulncheck
@@ -122,13 +122,13 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.21'
+        go-version: '1.24'
         cache: true
 
     - name: Install tools
       run: |
         go install honnef.co/go/tools/cmd/staticcheck@latest
-        go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+        go install github.com/securego/gosec/v2/cmd/gosec@latest
 
     - name: Run gosec
       run: |
@@ -156,7 +156,7 @@ jobs:
     
     strategy:
       matrix:
-        go-version: ['1.20', '1.21', '1.22']
+        go-version: ['1.22', '1.23', '1.24']
     
     steps:
     - name: Checkout code
