@@ -302,17 +302,23 @@ chocolateys:
     skip_publish: false
 
 # Snapcraft
-# NOTE: Disabled until SNAPCRAFT_STORE_CREDENTIALS is set in GitHub Secrets
-# To enable:
-# 1. Register at https://snapcraft.io/
-# 2. Register app name "gopher"
-# 3. Export credentials: snapcraft export-login --snaps gopher --channels stable -
-# 4. Add to GitHub Secrets: gh secret set SNAPCRAFT_STORE_CREDENTIALS
-# 5. Set publish: true
+# NOTE: Disabled - "gopher" name is on Snapcraft's reserved/sensitive names list
+# Status: Pending approval from Snapcraft team for name usage
+# The name is available but requires manual approval due to potential conflicts
+# 
+# To enable after approval is granted:
+# 1. Wait for Snapcraft team approval email
+# 2. Register "gopher" name at https://dashboard.snapcraft.io/register-snap/
+# 3. Install snapcraft CLI: brew install snapcraft
+# 4. Login: snapcraft login
+# 5. Export credentials: snapcraft export-login --snaps gopher --channels stable - > creds.txt
+# 6. Add to GitHub Secrets: gh secret set SNAPCRAFT_STORE_CREDENTIALS < creds.txt
+# 7. Set publish: true
+# 8. Release next version (v1.0.1 or v1.1.0)
 snapcrafts:
   - name: gopher
     
-    # Publish to Snap Store (disabled until configured)
+    # Publish to Snap Store (disabled - pending name approval)
     publish: false
     
     # Summary (max 79 chars)
