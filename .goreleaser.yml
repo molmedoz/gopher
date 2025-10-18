@@ -313,48 +313,50 @@ chocolateys:
 # 4. Login: snapcraft login
 # 5. Export credentials: snapcraft export-login --snaps gopher --channels stable - > creds.txt
 # 6. Add to GitHub Secrets: gh secret set SNAPCRAFT_STORE_CREDENTIALS < creds.txt
-# 7. Set publish: true
+# 7. Uncomment the snapcrafts section below
 # 8. Release next version (v1.0.1 or v1.1.0)
-snapcrafts:
-  - name: gopher
-    
-    # Publish to Snap Store (disabled - pending name approval)
-    publish: false
-    
-    # Summary (max 79 chars)
-    summary: A simple, fast, and dependency-free Go version manager
-    
-    # Description
-    description: |
-      Gopher is a cross-platform Go version manager that enables you to:
-      
-      * Install and manage multiple Go versions
-      * Switch between versions instantly
-      * Manage system and custom Go installations  
-      * Work on different projects with different Go versions
-      * Zero external dependencies - built with Go standard library only
-      * Cryptographic verification of all downloads
-      * Full JSON support for scripting and automation
-      
-      Perfect for developers working on multiple projects or testing across versions.
-    
-    # Grade (stable, devel, or candidate)
-    grade: stable
-    
-    # Confinement (strict, devmode, or classic)
-    # classic = full system access (needed for version management)
-    confinement: classic
-    
-    # License
-    license: MIT
-    
-    # Base snap
-    base: core22
-    
-    # Apps
-    apps:
-      gopher:
-        command: gopher
+
+# COMMENTED OUT - Uncomment after Snapcraft approval
+# snapcrafts:
+#   - name: gopher
+#     
+#     # Publish to Snap Store (disabled - pending name approval)
+#     publish: false
+#     
+#     # Summary (max 79 chars)
+#     summary: A simple, fast, and dependency-free Go version manager
+#     
+#     # Description
+#     description: |
+#       Gopher is a cross-platform Go version manager that enables you to:
+#       
+#       * Install and manage multiple Go versions
+#       * Switch between versions instantly
+#       * Manage system and custom Go installations  
+#       * Work on different projects with different Go versions
+#       * Zero external dependencies - built with Go standard library only
+#       * Cryptographic verification of all downloads
+#       * Full JSON support for scripting and automation
+#       
+#       Perfect for developers working on multiple projects or testing across versions.
+#     
+#     # Grade (stable, devel, or candidate)
+#     grade: stable
+#     
+#     # Confinement (strict, devmode, or classic)
+#     # classic = full system access (needed for version management)
+#     confinement: classic
+#     
+#     # License
+#     license: MIT
+#     
+#     # Base snap
+#     base: core22
+#     
+#     # Apps
+#     apps:
+#       gopher:
+#         command: gopher
 
 # Linux packages (.deb, .rpm, .apk)
 nfpms:
