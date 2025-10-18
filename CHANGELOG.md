@@ -59,6 +59,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `make ci` - Run complete CI workflow locally (matches GitHub Actions)
   - Automatic tool path resolution (no PATH configuration needed)
   
+### Distribution
+- **Homebrew**: Available via `brew install molmedoz/tap/gopher` (macOS/Linux)
+- **Linux Packages**: Debian (.deb), RedHat (.rpm), Alpine (.apk), Arch (.pkg.tar.zst)
+- **GitHub Releases**: Pre-built binaries for all platforms (Linux, macOS, Windows, ARM)
+- **Direct Download**: All platforms can download from GitHub Releases
+- **Chocolatey**: Coming in v1.0.1+ (requires Windows build runner)
+- **Snap**: Pending Snapcraft name approval (will be added in future release)
+
 ### Technical Improvements
 - **Testing**: All tests include `-race` flag by default for race condition detection
 - **Makefile**: Tools use full paths from GOPATH/bin (no PATH setup required)
@@ -71,6 +79,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Architecture**: Modular design with reusable components
 - **Thread Safety**: Mutex-protected concurrent operations in alias manager
 - **Cross-platform**: Platform-specific optimizations for Windows, macOS, and Linux
+- **Security**: Security scanning with gosec, vulnerability checks with govulncheck
 
 ### Commands Available
 - `gopher list` - List installed Go versions (with aliases shown inline)

@@ -153,6 +153,19 @@ jobs:
         with:
           go-version: '1.24.9'
 
+      - name: Install packaging dependencies
+        run: |
+          echo "📦 Installing packaging tools..."
+          
+          # Install rpm for .rpm packages
+          sudo apt-get update
+          sudo apt-get install -y rpm
+          
+          # Install tools for Arch packages
+          sudo apt-get install -y zstd
+          
+          echo "✅ Packaging dependencies installed"
+
       - name: Extract release notes
         id: release_notes
         run: |
