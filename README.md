@@ -90,16 +90,40 @@ brew install molmedoz/tap/gopher
 
 #### **Windows:**
 ```powershell
-# Using Chocolatey
-choco install gopher
+# Download the latest release
+# Visit: https://github.com/molmedoz/gopher/releases/latest
+# Extract and add to PATH
+
+# Or using PowerShell:
+Invoke-WebRequest -Uri "https://github.com/molmedoz/gopher/releases/latest/download/gopher_Windows_x86_64.tar.gz" -OutFile gopher.tar.gz
+tar -xzf gopher.tar.gz
+# Move gopher.exe to a directory in your PATH
+
+# Chocolatey coming soon!
 ```
 
 #### **Linux:**
 ```bash
-# Using Snap (all distributions)
-sudo snap install gopher --classic
+# Using Homebrew (recommended)
+brew install molmedoz/tap/gopher
 
-# Or download binary from releases
+# Debian/Ubuntu (.deb)
+wget https://github.com/molmedoz/gopher/releases/latest/download/gopher_VERSION_linux_amd64.deb
+sudo dpkg -i gopher_VERSION_linux_amd64.deb
+
+# RedHat/Fedora/CentOS (.rpm)
+wget https://github.com/molmedoz/gopher/releases/latest/download/gopher_VERSION_linux_amd64.rpm
+sudo rpm -i gopher_VERSION_linux_amd64.rpm
+
+# Alpine (.apk)
+wget https://github.com/molmedoz/gopher/releases/latest/download/gopher_VERSION_linux_amd64.apk
+sudo apk add --allow-untrusted gopher_VERSION_linux_amd64.apk
+
+# Arch Linux
+wget https://github.com/molmedoz/gopher/releases/latest/download/gopher_VERSION_linux_amd64.pkg.tar.zst
+sudo pacman -U gopher_VERSION_linux_amd64.pkg.tar.zst
+
+# Or download binary directly
 # See: https://github.com/molmedoz/gopher/releases
 ```
 

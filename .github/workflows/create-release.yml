@@ -153,6 +153,19 @@ jobs:
         with:
           go-version: '1.24.9'
 
+      - name: Install packaging dependencies
+        run: |
+          echo "📦 Installing packaging tools..."
+          
+          # Install rpm for .rpm packages
+          sudo apt-get update
+          sudo apt-get install -y rpm
+          
+          # Install tools for Arch packages
+          sudo apt-get install -y zstd
+          
+          echo "✅ Packaging dependencies installed"
+
       - name: Extract release notes
         id: release_notes
         run: |
@@ -178,6 +191,7 @@ jobs:
           echo "notes_file=/tmp/release_notes.md" >> $GITHUB_OUTPUT
 
       - name: Run GoReleaser
+        id: goreleaser
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
@@ -185,8 +199,28 @@ jobs:
           args: release --clean --release-notes=${{ steps.release_notes.outputs.notes_file }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Check GoReleaser result
+        if: steps.goreleaser.outcome == 'failure'
+        run: |
+          echo "❌ GoReleaser failed! Cleaning up tag..."
+          TAG="${{ needs.validate.outputs.tag }}"
+          
+          # Delete the tag locally and remotely
+          git tag -d "$TAG" || true
+          git push origin ":refs/tags/$TAG" || true
+          
+          echo "## ❌ Release Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "GoReleaser failed. Tag \`$TAG\` has been deleted." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Please fix the issues and try again." >> $GITHUB_STEP_SUMMARY
+          
+          exit 1
 
       - name: Release summary
+        if: steps.goreleaser.outcome == 'success'
         run: |
           echo "## 🎉 Release Published" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY

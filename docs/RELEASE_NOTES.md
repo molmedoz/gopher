@@ -48,23 +48,49 @@ Gopher v1.0.0 is a production-ready Go version manager with comprehensive featur
 
 ### 📦 Installation
 
-#### Package Managers (Coming Soon)
+#### Homebrew (macOS/Linux) ✅
 ```bash
-# Homebrew (macOS/Linux)
 brew install molmedoz/tap/gopher
-
-# Chocolatey (Windows)
-choco install gopher
-
-# Snap (Linux)
-snap install gopher
 ```
+
+#### Linux Package Managers ✅
+```bash
+# Debian/Ubuntu
+wget https://github.com/molmedoz/gopher/releases/download/v1.0.0/gopher_1.0.0_linux_amd64.deb
+sudo dpkg -i gopher_1.0.0_linux_amd64.deb
+
+# RedHat/Fedora/CentOS
+wget https://github.com/molmedoz/gopher/releases/download/v1.0.0/gopher_1.0.0_linux_amd64.rpm
+sudo rpm -i gopher_1.0.0_linux_amd64.rpm
+
+# Alpine
+wget https://github.com/molmedoz/gopher/releases/download/v1.0.0/gopher_1.0.0_linux_amd64.apk
+sudo apk add --allow-untrusted gopher_1.0.0_linux_amd64.apk
+
+# Arch Linux
+wget https://github.com/molmedoz/gopher/releases/download/v1.0.0/gopher_1.0.0_linux_amd64.pkg.tar.zst
+sudo pacman -U gopher_1.0.0_linux_amd64.pkg.tar.zst
+```
+
+#### Windows (Direct Download) ✅
+```powershell
+# Download from GitHub Releases
+Invoke-WebRequest -Uri "https://github.com/molmedoz/gopher/releases/download/v1.0.0/gopher_1.0.0_Windows_x86_64.tar.gz" -OutFile gopher.tar.gz
+tar -xzf gopher.tar.gz
+# Move gopher.exe to a directory in your PATH
+
+# Chocolatey coming in v1.0.1+
+```
+
+#### Coming Soon
+- **Chocolatey** (Windows) - Requires Windows build runner (planned for v1.0.1+)
+- **Snap** (Linux) - Pending Snapcraft name approval
 
 #### Binary Download
 Download from [GitHub Releases](https://github.com/molmedoz/gopher/releases/tag/v1.0.0):
-- Linux: `gopher-linux-amd64`, `gopher-linux-arm64`
-- macOS: `gopher-darwin-amd64`, `gopher-darwin-arm64`
-- Windows: `gopher-windows-amd64.exe`
+- All platforms and architectures available
+- Pre-built binaries with checksums
+- Source code archives included
 
 ### 🚀 Quick Start
 
