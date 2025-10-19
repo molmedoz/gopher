@@ -165,46 +165,10 @@ jobs:
           Write-Host "SUCCESS: Chocolatey available for package building"
         shell: powershell
 
-      - name: Extract release notes
-        id: release_notes
-        run: |
-          $VERSION = "${{ needs.validate.outputs.version }}"
-          $NOTES_FILE = "release_notes.md"
-          
-          Write-Host "Extracting release notes for version $VERSION"
-          
-          # Read CHANGELOG.md
-          $changelog = Get-Content CHANGELOG.md -Raw
-          
-          # Try to extract section for this version
-          $pattern1 = "(?s)## \[$VERSION\]\s*\r?\n(.+?)(?=\r?\n## \[|\z)"
-          $pattern2 = "(?s)## \[v$VERSION\]\s*\r?\n(.+?)(?=\r?\n## \[|\z)"
-          
-          if ($changelog -match $pattern1) {
-            $content = $matches[1].Trim()
-            [System.IO.File]::WriteAllText($NOTES_FILE, $content, [System.Text.UTF8Encoding]::new($false))
-            Write-Host "SUCCESS: Found release notes for [$VERSION]"
-          } elseif ($changelog -match $pattern2) {
-            $content = $matches[1].Trim()
-            [System.IO.File]::WriteAllText($NOTES_FILE, $content, [System.Text.UTF8Encoding]::new($false))
-            Write-Host "SUCCESS: Found release notes for [v$VERSION]"
-          } else {
-            # Use generic notes if not found
-            Write-Host "WARNING: Version not found in CHANGELOG, using generic notes"
-            $genericNotes = "Release $VERSION`n`nSee [CHANGELOG.md](CHANGELOG.md) for details."
-            [System.IO.File]::WriteAllText($NOTES_FILE, $genericNotes, [System.Text.UTF8Encoding]::new($false))
-          }
-          
-          Write-Host "SUCCESS: Release notes written to: $NOTES_FILE"
-          
-          # Output the file path (use forward slashes for cross-platform compatibility)
-          "notes_file=$NOTES_FILE" | Add-Content -Path $env:GITHUB_OUTPUT -Encoding utf8
-        shell: powershell
-
       - name: Prepare GoReleaser arguments
         id: goreleaser_args
         run: |
-          $args = "release --clean --release-notes=${{ steps.release_notes.outputs.notes_file }}"
+          $args = "release --clean"
           
           # Add draft flag if requested
           if ("${{ github.event.inputs.draft }}" -eq "true") {
