@@ -181,22 +181,24 @@ jobs:
           $pattern2 = "(?s)## \[v$VERSION\]\s*\r?\n(.+?)(?=\r?\n## \[|\z)"
           
           if ($changelog -match $pattern1) {
-            $matches[1].Trim() | Out-File -FilePath $NOTES_FILE -Encoding UTF8NoBOM
+            $content = $matches[1].Trim()
+            [System.IO.File]::WriteAllText($NOTES_FILE, $content, [System.Text.UTF8Encoding]::new($false))
             Write-Host "SUCCESS: Found release notes for [$VERSION]"
           } elseif ($changelog -match $pattern2) {
-            $matches[1].Trim() | Out-File -FilePath $NOTES_FILE -Encoding UTF8NoBOM
+            $content = $matches[1].Trim()
+            [System.IO.File]::WriteAllText($NOTES_FILE, $content, [System.Text.UTF8Encoding]::new($false))
             Write-Host "SUCCESS: Found release notes for [v$VERSION]"
           } else {
             # Use generic notes if not found
             Write-Host "WARNING: Version not found in CHANGELOG, using generic notes"
             $genericNotes = "Release $VERSION`n`nSee [CHANGELOG.md](CHANGELOG.md) for details."
-            $genericNotes | Out-File -FilePath $NOTES_FILE -Encoding UTF8NoBOM
+            [System.IO.File]::WriteAllText($NOTES_FILE, $genericNotes, [System.Text.UTF8Encoding]::new($false))
           }
           
           Write-Host "SUCCESS: Release notes written to: $NOTES_FILE"
           
           # Output the file path (use forward slashes for cross-platform compatibility)
-          "notes_file=$NOTES_FILE" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding UTF8NoBOM -Append
+          "notes_file=$NOTES_FILE" | Add-Content -Path $env:GITHUB_OUTPUT -Encoding utf8
         shell: powershell
 
       - name: Prepare GoReleaser arguments
@@ -218,7 +220,7 @@ jobs:
           }
           
           Write-Host "GoReleaser arguments: $args"
-          "args=$args" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding UTF8NoBOM -Append
+          "args=$args" | Add-Content -Path $env:GITHUB_OUTPUT -Encoding utf8
         shell: powershell
 
       - name: Run GoReleaser
@@ -260,7 +262,7 @@ jobs:
           $summary = "## Release Failed`n`n"
           $summary += "GoReleaser failed. Tag ``$TAG`` has been deleted.`n`n"
           $summary += "Please check the logs above, fix the issues, and try again."
-          $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding UTF8NoBOM -Append
+          $summary | Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8
           
           exit 1
         shell: powershell
@@ -271,6 +273,6 @@ jobs:
           $summary = "## Release Published`n`n"
           $summary += "Version ``${{ needs.validate.outputs.tag }}`` has been released!`n`n"
           $summary += "View release: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }}"
-          $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding UTF8NoBOM -Append
+          $summary | Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8
         shell: powershell
 
