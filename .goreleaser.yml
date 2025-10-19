@@ -188,11 +188,10 @@ release:
     **Thank you for using Gopher!** 🎉
 
 # Homebrew Tap
-# NOTE: Disabled until molmedoz/homebrew-tap repository is created
-# To enable: Create repo with 'gh repo create molmedoz/homebrew-tap --public'
-# Then set skip_upload: false
-# Updated to 'homebrew' (brews is deprecated in GoReleaser v2)
-homebrew:
+# NOTE: In GoReleaser v2, 'homebrew' was renamed to 'brews'
+# Repository: molmedoz/homebrew-tap (already created)
+# Publishing handled by separate Linux job in create-release.yml workflow
+brews:
   - name: gopher
     
     # GitHub repository for tap
