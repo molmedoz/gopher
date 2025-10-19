@@ -157,12 +157,12 @@ jobs:
 
       - name: Verify Chocolatey is available
         run: |
-          Write-Host "📦 Verifying packaging tools..."
+          Write-Host "Verifying packaging tools..."
           
           # Verify Chocolatey is installed (pre-installed on Windows runners)
           choco --version
           
-          Write-Host "✅ Chocolatey available for package building"
+          Write-Host "SUCCESS: Chocolatey available for package building"
         shell: powershell
 
       - name: Extract release notes
@@ -171,7 +171,7 @@ jobs:
           $VERSION = "${{ needs.validate.outputs.version }}"
           $NOTES_FILE = "release_notes.md"
           
-          Write-Host "📝 Extracting release notes for version $VERSION"
+          Write-Host "Extracting release notes for version $VERSION"
           
           # Read CHANGELOG.md
           $changelog = Get-Content CHANGELOG.md -Raw
@@ -182,18 +182,18 @@ jobs:
           
           if ($changelog -match $pattern1) {
             $matches[1].Trim() | Out-File -FilePath $NOTES_FILE -Encoding UTF8NoBOM
-            Write-Host "✅ Found release notes for [$VERSION]"
+            Write-Host "SUCCESS: Found release notes for [$VERSION]"
           } elseif ($changelog -match $pattern2) {
             $matches[1].Trim() | Out-File -FilePath $NOTES_FILE -Encoding UTF8NoBOM
-            Write-Host "✅ Found release notes for [v$VERSION]"
+            Write-Host "SUCCESS: Found release notes for [v$VERSION]"
           } else {
             # Use generic notes if not found
-            Write-Host "⚠️  Version not found in CHANGELOG, using generic notes"
+            Write-Host "WARNING: Version not found in CHANGELOG, using generic notes"
             $genericNotes = "Release $VERSION`n`nSee [CHANGELOG.md](CHANGELOG.md) for details."
             $genericNotes | Out-File -FilePath $NOTES_FILE -Encoding UTF8NoBOM
           }
           
-          Write-Host "✅ Release notes written to: $NOTES_FILE"
+          Write-Host "SUCCESS: Release notes written to: $NOTES_FILE"
           
           # Output the file path (use forward slashes for cross-platform compatibility)
           "notes_file=$NOTES_FILE" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding UTF8NoBOM -Append
@@ -207,14 +207,14 @@ jobs:
           # Add draft flag if requested
           if ("${{ github.event.inputs.draft }}" -eq "true") {
             $args += " --draft"
-            Write-Host "📝 Creating as draft release"
+            Write-Host "Creating as draft release"
           }
           
           # Note: prerelease is auto-detected by GoReleaser based on semver
           # but we can override it if explicitly requested
           if ("${{ github.event.inputs.prerelease }}" -eq "true") {
             $args += " --prerelease"
-            Write-Host "⚠️  Marking as pre-release"
+            Write-Host "WARNING: Marking as pre-release"
           }
           
           Write-Host "GoReleaser arguments: $args"
@@ -237,7 +237,7 @@ jobs:
       - name: Check GoReleaser result
         if: steps.goreleaser.outcome == 'failure'
         run: |
-          Write-Host "❌ GoReleaser failed! Cleaning up tag..."
+          Write-Host "ERROR: GoReleaser failed! Cleaning up tag..."
           $TAG = "${{ needs.validate.outputs.tag }}"
           
           # Configure Git
@@ -248,16 +248,16 @@ jobs:
           Write-Host "Deleting local tag..."
           git tag -d $TAG
           if ($LASTEXITCODE -ne 0) {
-            Write-Host "⚠️  Warning: Failed to delete local tag"
+            Write-Host "WARNING: Failed to delete local tag"
           }
           
           Write-Host "Deleting remote tag..."
           git push origin ":refs/tags/$TAG"
           if ($LASTEXITCODE -ne 0) {
-            Write-Host "⚠️  Warning: Failed to delete remote tag"
+            Write-Host "WARNING: Failed to delete remote tag"
           }
           
-          $summary = "## ❌ Release Failed`n`n"
+          $summary = "## Release Failed`n`n"
           $summary += "GoReleaser failed. Tag ``$TAG`` has been deleted.`n`n"
           $summary += "Please check the logs above, fix the issues, and try again."
           $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding UTF8NoBOM -Append
@@ -268,7 +268,7 @@ jobs:
       - name: Release summary
         if: steps.goreleaser.outcome == 'success'
         run: |
-          $summary = "## 🎉 Release Published`n`n"
+          $summary = "## Release Published`n`n"
           $summary += "Version ``${{ needs.validate.outputs.tag }}`` has been released!`n`n"
           $summary += "View release: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }}"
           $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding UTF8NoBOM -Append
