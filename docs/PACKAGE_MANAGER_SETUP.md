@@ -11,7 +11,7 @@ This guide helps you set up Gopher for distribution through package managers (Ho
 | **GitHub Releases** | ✅ Ready | ✅ YES - Primary distribution |
 | **Linux Packages** | ✅ Ready | ✅ YES - deb, rpm, apk, Arch |
 | **Homebrew** | ⚠️ Needs Setup | ⚠️ Recommended |
-| **Chocolatey** | ⚠️ Needs Setup | ⚠️ Optional |
+| **Chocolatey** | ✅ Configured | ⚠️ Optional - Needs API key |
 | **Snap Store** | ⚠️ Needs Setup | ⚠️ Optional |
 
 **For v1.0.0:** GitHub Releases + Linux packages work immediately. Package managers can be added later.
@@ -112,7 +112,7 @@ gopher version
 ### Why Set This Up?
 - **Most popular** Windows package manager
 - **Easy for Windows users**: `choco install gopher`
-- **15 minutes** to set up
+- **10 minutes** to set up
 
 ### Setup Steps
 
@@ -138,14 +138,17 @@ gh secret set CHOCOLATEY_API_KEY
 # Paste your API key when prompted
 ```
 
-#### 4. Enable in .goreleaser.yml
-```yaml
-chocolateys:
-  - skip_publish: false  # Change from true to false
-```
+#### 4. Configuration
+**✅ Already configured!** The release workflow runs on Windows where `choco` CLI is available.
+
+Chocolatey packages are built automatically during release. They will be:
+- **Built** on every release (included in GitHub Release artifacts)
+- **Published** to Chocolatey.org when `CHOCOLATEY_API_KEY` is set
+
+No changes to `.goreleaser.yml` needed - it's ready to go!
 
 #### 5. First Release
-The first release will create the package. Chocolatey will review it (24-48 hours).
+The first release will create and submit the package. Chocolatey will review it (24-48 hours).
 
 ### Testing
 ```powershell
@@ -304,7 +307,7 @@ echo "   ✅ Always works (uploaded to GitHub Releases)"
 
 ### What's Disabled (Until Setup):
 - ⏸️ **Homebrew**: `skip_upload: true` (needs tap repo)
-- ⏸️ **Chocolatey**: `skip_publish: true` (needs API key)
+- ⏸️ **Chocolatey**: Builds automatically on Windows runner; publishing requires API key
 - ⏸️ **Snap**: `publish: false` (needs credentials)
 
 ---
@@ -443,10 +446,9 @@ brews:
 ```
 
 ### After Chocolatey API Key Added:
-```yaml
-chocolateys:
-  - skip_publish: false  # Changed from true
-```
+**No changes needed!** Chocolatey packages build automatically on the Windows runner.
+- Package is **built** on every release
+- Package is **published** when `CHOCOLATEY_API_KEY` secret is set
 
 ### After Snap Credentials Added:
 ```yaml
@@ -465,9 +467,11 @@ snapcrafts:
 
 ### Chocolatey
 - **Needs API key** - Get from chocolatey.org account
+- **Built on Windows** - Release workflow runs on Windows runner (choco CLI available)
 - **First package reviewed** - 24-48 hours approval time
 - **Future updates** - Automatic (no review)
 - **Moderation** - Must follow Chocolatey guidelines
+- **Publishing** - Package is published automatically when `CHOCOLATEY_API_KEY` is set
 
 ### Snap
 - **Needs registration** - Register app name first
