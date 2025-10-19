@@ -245,12 +245,8 @@ brews:
         https://molmedoz.github.io/gopher/
 
 # Chocolatey packages
-# NOTE: Disabled until CHOCOLATEY_API_KEY is set in GitHub Secrets
-# To enable:
-# 1. Create account at https://community.chocolatey.org/
-# 2. Get API key from account settings
-# 3. Add to GitHub Secrets: gh secret set CHOCOLATEY_API_KEY
-# 4. Set skip_publish: false
+# NOTE: Enabled - create-release.yml workflow runs on windows-latest (choco CLI available)
+# Package is built on every release and published when CHOCOLATEY_API_KEY is set
 chocolateys:
   - name: gopher
     
