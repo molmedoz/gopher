@@ -140,8 +140,8 @@ jobs:
           echo "The release workflow will now be triggered automatically." >> $GITHUB_STEP_SUMMARY
 
   release:
-    name: Create Release
-    runs-on: windows-latest  # Changed to Windows for Chocolatey support
+    name: Create Release (Windows/Chocolatey)
+    runs-on: windows-latest  # Windows for Chocolatey support
     needs: [validate, create-tag]
     steps:
       - name: Checkout code
@@ -168,7 +168,7 @@ jobs:
       - name: Prepare GoReleaser arguments
         id: goreleaser_args
         run: |
-          $args = "release --clean"
+          $args = "release --clean --skip=homebrew"
           
           # Add draft flag if requested
           if ("${{ github.event.inputs.draft }}" -eq "true") {
@@ -184,6 +184,7 @@ jobs:
           }
           
           Write-Host "GoReleaser arguments: $args"
+          Write-Host "Note: Homebrew publishing will be handled by separate Linux job"
           "args=$args" | Add-Content -Path $env:GITHUB_OUTPUT -Encoding utf8
         shell: powershell
 
@@ -234,9 +235,75 @@ jobs:
       - name: Release summary
         if: steps.goreleaser.outcome == 'success'
         run: |
-          $summary = "## Release Published`n`n"
+          $summary = "## ✅ Release Published (Windows/Chocolatey)`n`n"
           $summary += "Version ``${{ needs.validate.outputs.tag }}`` has been released!`n`n"
+          $summary += "- Binaries: ✅ Published`n"
+          $summary += "- Chocolatey: ✅ Published`n"
+          $summary += "- Homebrew: ⏳ Publishing in separate job`n`n"
           $summary += "View release: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }}"
           $summary | Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8
         shell: powershell
+
+  homebrew:
+    name: Publish to Homebrew Tap
+    runs-on: ubuntu-latest  # Linux for Homebrew publishing
+    needs: [validate, create-tag, release]
+    if: needs.release.result == 'success'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.validate.outputs.tag }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.9'
+
+      - name: Publish to Homebrew Tap
+        id: homebrew
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --skip=validate,build,announce,chocolateys,nfpms,source,checksum,archives
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Check Homebrew result
+        if: steps.homebrew.outcome == 'failure'
+        run: |
+          echo "## ⚠️ Homebrew Publishing Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The main release was successful, but Homebrew formula update failed." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Action required:** Update the Homebrew formula manually:" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "cd /tmp" >> $GITHUB_STEP_SUMMARY
+          echo "git clone https://github.com/molmedoz/homebrew-tap.git" >> $GITHUB_STEP_SUMMARY
+          echo "cd homebrew-tap" >> $GITHUB_STEP_SUMMARY
+          echo "# Update Formula/gopher.rb with new version and SHA256" >> $GITHUB_STEP_SUMMARY
+          echo "git commit -am 'Update gopher to ${{ needs.validate.outputs.tag }}'" >> $GITHUB_STEP_SUMMARY
+          echo "git push" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          
+          # Don't fail the workflow - main release succeeded
+          exit 0
+
+      - name: Homebrew summary
+        if: steps.homebrew.outcome == 'success'
+        run: |
+          echo "## ✅ Homebrew Formula Updated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Homebrew formula published to molmedoz/homebrew-tap" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Users can install with:" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "brew tap molmedoz/tap" >> $GITHUB_STEP_SUMMARY
+          echo "brew install gopher" >> $GITHUB_STEP_SUMMARY
+          echo "# Or upgrade: brew upgrade gopher" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
