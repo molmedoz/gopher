@@ -100,6 +100,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- Version: ${{ steps.normalize.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "- Tag: ${{ steps.normalize.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Draft: ${{ github.event.inputs.draft }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Pre-release: ${{ github.event.inputs.prerelease }}" >> $GITHUB_STEP_SUMMARY
           echo "- Tests: ✅ Passed" >> $GITHUB_STEP_SUMMARY
           echo "- Linter: ✅ Passed" >> $GITHUB_STEP_SUMMARY
           echo "- Build: ✅ Success" >> $GITHUB_STEP_SUMMARY
@@ -139,7 +141,7 @@ jobs:
 
   release:
     name: Create Release
-    runs-on: ubuntu-latest
+    runs-on: windows-latest  # Changed to Windows for Chocolatey support
     needs: [validate, create-tag]
     steps:
       - name: Checkout code
@@ -153,42 +155,71 @@ jobs:
         with:
           go-version: '1.24.9'
 
-      - name: Install packaging dependencies
+      - name: Verify Chocolatey is available
         run: |
-          echo "📦 Installing packaging tools..."
+          Write-Host "📦 Verifying packaging tools..."
           
-          # Install rpm for .rpm packages
-          sudo apt-get update
-          sudo apt-get install -y rpm
+          # Verify Chocolatey is installed (pre-installed on Windows runners)
+          choco --version
           
-          # Install tools for Arch packages
-          sudo apt-get install -y zstd
-          
-          echo "✅ Packaging dependencies installed"
+          Write-Host "✅ Chocolatey available for package building"
+        shell: powershell
 
       - name: Extract release notes
         id: release_notes
         run: |
-          VERSION="${{ needs.validate.outputs.version }}"
+          $VERSION = "${{ needs.validate.outputs.version }}"
+          $NOTES_FILE = "release_notes.md"
           
-          # Extract release notes from CHANGELOG.md
-          # Look for section matching the version
-          sed -n "/## \[${VERSION}\]/,/## \[/p" CHANGELOG.md | sed '$d' > /tmp/release_notes.md
+          Write-Host "📝 Extracting release notes for version $VERSION"
           
-          # If not found, check with 'v' prefix
-          if [ ! -s /tmp/release_notes.md ]; then
-            sed -n "/## \[v${VERSION}\]/,/## \[/p" CHANGELOG.md | sed '$d' > /tmp/release_notes.md
-          fi
+          # Read CHANGELOG.md
+          $changelog = Get-Content CHANGELOG.md -Raw
           
-          # If still empty, use generic notes
-          if [ ! -s /tmp/release_notes.md ]; then
-            echo "Release $VERSION" > /tmp/release_notes.md
-            echo "" >> /tmp/release_notes.md
-            echo "See [CHANGELOG.md](CHANGELOG.md) for details." >> /tmp/release_notes.md
-          fi
+          # Try to extract section for this version
+          $pattern1 = "(?s)## \[$VERSION\]\s*\r?\n(.+?)(?=\r?\n## \[|\z)"
+          $pattern2 = "(?s)## \[v$VERSION\]\s*\r?\n(.+?)(?=\r?\n## \[|\z)"
           
-          # Output for next steps
-          echo "notes_file=/tmp/release_notes.md" >> $GITHUB_OUTPUT
+          if ($changelog -match $pattern1) {
+            $matches[1].Trim() | Out-File -FilePath $NOTES_FILE -Encoding UTF8NoBOM
+            Write-Host "✅ Found release notes for [$VERSION]"
+          } elseif ($changelog -match $pattern2) {
+            $matches[1].Trim() | Out-File -FilePath $NOTES_FILE -Encoding UTF8NoBOM
+            Write-Host "✅ Found release notes for [v$VERSION]"
+          } else {
+            # Use generic notes if not found
+            Write-Host "⚠️  Version not found in CHANGELOG, using generic notes"
+            $genericNotes = "Release $VERSION`n`nSee [CHANGELOG.md](CHANGELOG.md) for details."
+            $genericNotes | Out-File -FilePath $NOTES_FILE -Encoding UTF8NoBOM
+          }
+          
+          Write-Host "✅ Release notes written to: $NOTES_FILE"
+          
+          # Output the file path (use forward slashes for cross-platform compatibility)
+          "notes_file=$NOTES_FILE" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding UTF8NoBOM -Append
+        shell: powershell
+
+      - name: Prepare GoReleaser arguments
+        id: goreleaser_args
+        run: |
+          $args = "release --clean --release-notes=${{ steps.release_notes.outputs.notes_file }}"
+          
+          # Add draft flag if requested
+          if ("${{ github.event.inputs.draft }}" -eq "true") {
+            $args += " --draft"
+            Write-Host "📝 Creating as draft release"
+          }
+          
+          # Note: prerelease is auto-detected by GoReleaser based on semver
+          # but we can override it if explicitly requested
+          if ("${{ github.event.inputs.prerelease }}" -eq "true") {
+            $args += " --prerelease"
+            Write-Host "⚠️  Marking as pre-release"
+          }
+          
+          Write-Host "GoReleaser arguments: $args"
+          "args=$args" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding UTF8NoBOM -Append
+        shell: powershell
 
       - name: Run GoReleaser
         id: goreleaser
@@ -196,35 +227,50 @@ jobs:
         with:
           distribution: goreleaser
           version: '~> v2'
-          args: release --clean --release-notes=${{ steps.release_notes.outputs.notes_file }}
+          args: ${{ steps.goreleaser_args.outputs.args }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         continue-on-error: true
 
       - name: Check GoReleaser result
         if: steps.goreleaser.outcome == 'failure'
         run: |
-          echo "❌ GoReleaser failed! Cleaning up tag..."
-          TAG="${{ needs.validate.outputs.tag }}"
+          Write-Host "❌ GoReleaser failed! Cleaning up tag..."
+          $TAG = "${{ needs.validate.outputs.tag }}"
+          
+          # Configure Git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           
           # Delete the tag locally and remotely
-          git tag -d "$TAG" || true
-          git push origin ":refs/tags/$TAG" || true
+          Write-Host "Deleting local tag..."
+          git tag -d $TAG
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "⚠️  Warning: Failed to delete local tag"
+          }
           
-          echo "## ❌ Release Failed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "GoReleaser failed. Tag \`$TAG\` has been deleted." >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Please fix the issues and try again." >> $GITHUB_STEP_SUMMARY
+          Write-Host "Deleting remote tag..."
+          git push origin ":refs/tags/$TAG"
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "⚠️  Warning: Failed to delete remote tag"
+          }
+          
+          $summary = "## ❌ Release Failed`n`n"
+          $summary += "GoReleaser failed. Tag ``$TAG`` has been deleted.`n`n"
+          $summary += "Please check the logs above, fix the issues, and try again."
+          $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding UTF8NoBOM -Append
           
           exit 1
+        shell: powershell
 
       - name: Release summary
         if: steps.goreleaser.outcome == 'success'
         run: |
-          echo "## 🎉 Release Published" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Version \`${{ needs.validate.outputs.tag }}\` has been released!" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "View release: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          $summary = "## 🎉 Release Published`n`n"
+          $summary += "Version ``${{ needs.validate.outputs.tag }}`` has been released!`n`n"
+          $summary += "View release: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }}"
+          $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding UTF8NoBOM -Append
+        shell: powershell
 
