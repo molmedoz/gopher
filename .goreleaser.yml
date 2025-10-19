@@ -7,10 +7,10 @@ version: 2
 project_name: gopher
 
 # Before hooks - run before building
+# Note: Tests are run in CI validation job before this step
 before:
   hooks:
     - go mod tidy
-    - go test ./...
 
 # Build configuration
 builds:
