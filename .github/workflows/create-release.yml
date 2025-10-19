@@ -139,7 +139,7 @@ jobs:
 
   release:
     name: Create Release
-    runs-on: ubuntu-latest
+    runs-on: windows-latest  # Changed to Windows for Chocolatey support
     needs: [validate, create-tag]
     steps:
       - name: Checkout code
@@ -153,42 +153,47 @@ jobs:
         with:
           go-version: '1.24.9'
 
-      - name: Install packaging dependencies
+      - name: Verify Chocolatey is available
         run: |
-          echo "📦 Installing packaging tools..."
+          Write-Host "📦 Verifying packaging tools..."
           
-          # Install rpm for .rpm packages
-          sudo apt-get update
-          sudo apt-get install -y rpm
+          # Verify Chocolatey is installed (pre-installed on Windows runners)
+          choco --version
           
-          # Install tools for Arch packages
-          sudo apt-get install -y zstd
-          
-          echo "✅ Packaging dependencies installed"
+          Write-Host "✅ Chocolatey available for package building"
+        shell: powershell
 
       - name: Extract release notes
         id: release_notes
         run: |
-          VERSION="${{ needs.validate.outputs.version }}"
+          $VERSION = "${{ needs.validate.outputs.version }}"
+          $TEMP_DIR = $env:TEMP
+          $NOTES_FILE = "$TEMP_DIR\release_notes.md"
           
-          # Extract release notes from CHANGELOG.md
-          # Look for section matching the version
-          sed -n "/## \[${VERSION}\]/,/## \[/p" CHANGELOG.md | sed '$d' > /tmp/release_notes.md
+          Write-Host "📝 Extracting release notes for version $VERSION"
           
-          # If not found, check with 'v' prefix
-          if [ ! -s /tmp/release_notes.md ]; then
-            sed -n "/## \[v${VERSION}\]/,/## \[/p" CHANGELOG.md | sed '$d' > /tmp/release_notes.md
-          fi
+          # Read CHANGELOG.md
+          $changelog = Get-Content CHANGELOG.md -Raw
           
-          # If still empty, use generic notes
-          if [ ! -s /tmp/release_notes.md ]; then
-            echo "Release $VERSION" > /tmp/release_notes.md
-            echo "" >> /tmp/release_notes.md
-            echo "See [CHANGELOG.md](CHANGELOG.md) for details." >> /tmp/release_notes.md
-          fi
+          # Try to extract section for this version
+          if ($changelog -match "(?s)## \[$VERSION\](.+?)(?=## \[|$)") {
+            $matches[1].Trim() | Out-File -FilePath $NOTES_FILE -Encoding UTF8
+          } elseif ($changelog -match "(?s)## \[v$VERSION\](.+?)(?=## \[|$)") {
+            $matches[1].Trim() | Out-File -FilePath $NOTES_FILE -Encoding UTF8
+          } else {
+            # Use generic notes if not found
+            @"
+Release $VERSION
+
+See [CHANGELOG.md](CHANGELOG.md) for details.
+"@ | Out-File -FilePath $NOTES_FILE -Encoding UTF8
+          }
+          
+          Write-Host "✅ Release notes extracted to: $NOTES_FILE"
           
           # Output for next steps
-          echo "notes_file=/tmp/release_notes.md" >> $GITHUB_OUTPUT
+          "notes_file=$NOTES_FILE" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        shell: powershell
 
       - name: Run GoReleaser
         id: goreleaser
@@ -199,32 +204,44 @@ jobs:
           args: release --clean --release-notes=${{ steps.release_notes.outputs.notes_file }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_TOKEN }}
         continue-on-error: true
 
       - name: Check GoReleaser result
         if: steps.goreleaser.outcome == 'failure'
         run: |
-          echo "❌ GoReleaser failed! Cleaning up tag..."
-          TAG="${{ needs.validate.outputs.tag }}"
+          Write-Host "❌ GoReleaser failed! Cleaning up tag..."
+          $TAG = "${{ needs.validate.outputs.tag }}"
+          
+          # Configure Git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           
           # Delete the tag locally and remotely
-          git tag -d "$TAG" || true
-          git push origin ":refs/tags/$TAG" || true
+          git tag -d $TAG 2>$null
+          git push origin ":refs/tags/$TAG" 2>$null
           
-          echo "## ❌ Release Failed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "GoReleaser failed. Tag \`$TAG\` has been deleted." >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Please fix the issues and try again." >> $GITHUB_STEP_SUMMARY
+          @"
+## ❌ Release Failed
+
+GoReleaser failed. Tag ``$TAG`` has been deleted.
+
+Please fix the issues and try again.
+"@ | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
           
           exit 1
+        shell: powershell
 
       - name: Release summary
         if: steps.goreleaser.outcome == 'success'
         run: |
-          echo "## 🎉 Release Published" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Version \`${{ needs.validate.outputs.tag }}\` has been released!" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "View release: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          @"
+## 🎉 Release Published
+
+Version ``${{ needs.validate.outputs.tag }}`` has been released!
+
+View release: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }}
+"@ | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+        shell: powershell
 
