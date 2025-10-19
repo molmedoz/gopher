@@ -298,10 +298,9 @@ chocolateys:
     # Source repository
     source_repo: "https://push.chocolatey.org/"
     
-    # Temporarily disabled - requires Windows runner with choco CLI
-    # GoReleaser on Linux can't build chocolatey packages
-    # TODO: Set up separate Windows runner or build packages manually
-    skip_publish: true
+    # Build on Windows runner where choco CLI is available
+    # Publishing enabled when CHOCOLATEY_API_KEY is set
+    skip_publish: false
 
 # Snapcraft
 # NOTE: Disabled - "gopher" name is on Snapcraft's reserved/sensitive names list
