@@ -245,62 +245,68 @@ brews:
         https://molmedoz.github.io/gopher/
 
 # Chocolatey packages
-# NOTE: Disabled until CHOCOLATEY_API_KEY is set in GitHub Secrets
-# To enable:
-# 1. Create account at https://community.chocolatey.org/
-# 2. Get API key from account settings
-# 3. Add to GitHub Secrets: gh secret set CHOCOLATEY_API_KEY
-# 4. Set skip_publish: false
-chocolateys:
-  - name: gopher
-    
-    # Package info
-    owners: molmedoz
-    title: Gopher - Go Version Manager
-    authors: molmedoz
-    
-    # URLs
-    project_url: https://github.com/molmedoz/gopher
-    url_template: "https://github.com/molmedoz/gopher/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-    icon_url: 'https://raw.githubusercontent.com/molmedoz/gopher/main/gopher.jpeg'
-    license_url: https://github.com/molmedoz/gopher/blob/main/LICENSE
-    require_license_acceptance: false
-    project_source_url: https://github.com/molmedoz/gopher
-    docs_url: https://molmedoz.github.io/gopher/
-    bug_tracker_url: https://github.com/molmedoz/gopher/issues
-    
-    # Tags for search
-    tags: "go golang version-manager cli developer-tools version-control"
-    
-    # Summary (max 200 chars)
-    summary: A simple, fast, and dependency-free Go version manager
-    
-    # Description
-    description: |
-      Gopher is a cross-platform Go version manager written in Go that enables you to:
-      
-      * Install and manage multiple Go versions
-      * Switch between Go versions instantly
-      * Manage system and Gopher-installed Go versions
-      * Work on different projects with different Go versions
-      * Zero external dependencies
-      * Cryptographic verification of all downloads
-      * Full JSON support for scripting
-      
-      Perfect for developers who work on multiple Go projects or need to test across Go versions.
-    
-    # Release notes URL
-    release_notes: "https://github.com/molmedoz/gopher/releases/tag/{{ .Tag }}"
-    
-    # API key from environment
-    api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
-    
-    # Source repository
-    source_repo: "https://push.chocolatey.org/"
-    
-    # Build on Windows runner where choco CLI is available
-    # Publishing enabled when CHOCOLATEY_API_KEY is set
-    skip_publish: false
+# NOTE: Disabled - Chocolatey package generation requires Windows runner with choco CLI
+# The create-release.yml workflow runs on ubuntu-latest which doesn't have choco
+# Status: Will be enabled in v1.0.1+ when Windows runner is added to workflow
+# 
+# To enable in future releases:
+# 1. Update .github/workflows/create-release.yml to use windows-latest runner
+# 2. Ensure CHOCOLATEY_API_KEY is set in GitHub Secrets
+# 3. Uncomment the chocolateys section below
+# 4. Release next version (v1.0.1 or v1.1.0)
+# 
+# Manual publishing option until then:
+# 1. Download gopher.exe from GitHub Releases
+# 2. Create .nuspec file manually
+# 3. Run: choco pack
+# 4. Run: choco push gopher.VERSION.nupkg --api-key YOUR_KEY
+#
+# chocolateys:
+#   - name: gopher
+#     
+#     # Package info
+#     owners: molmedoz
+#     title: Gopher - Go Version Manager
+#     authors: molmedoz
+#     
+#     # URLs
+#     project_url: https://github.com/molmedoz/gopher
+#     url_template: "https://github.com/molmedoz/gopher/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+#     icon_url: 'https://raw.githubusercontent.com/molmedoz/gopher/main/gopher.jpeg'
+#     license_url: https://github.com/molmedoz/gopher/blob/main/LICENSE
+#     require_license_acceptance: false
+#     project_source_url: https://github.com/molmedoz/gopher
+#     docs_url: https://molmedoz.github.io/gopher/
+#     bug_tracker_url: https://github.com/molmedoz/gopher/issues
+#     
+#     # Tags for search
+#     tags: "go golang version-manager cli developer-tools version-control"
+#     
+#     # Summary (max 200 chars)
+#     summary: A simple, fast, and dependency-free Go version manager
+#     
+#     # Description
+#     description: |
+#       Gopher is a cross-platform Go version manager written in Go that enables you to:
+#       
+#       * Install and manage multiple Go versions
+#       * Switch between Go versions instantly
+#       * Manage system and Gopher-installed Go versions
+#       * Work on different projects with different Go versions
+#       * Zero external dependencies
+#       * Cryptographic verification of all downloads
+#       * Full JSON support for scripting
+#       
+#       Perfect for developers who work on multiple Go projects or need to test across Go versions.
+#     
+#     # Release notes URL
+#     release_notes: "https://github.com/molmedoz/gopher/releases/tag/{{ .Tag }}"
+#     
+#     # API key from environment
+#     api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
+#     
+#     # Source repository
+#     source_repo: "https://push.chocolatey.org/"
 
 # Snapcraft
 # NOTE: Disabled - "gopher" name is on Snapcraft's reserved/sensitive names list
