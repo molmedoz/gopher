@@ -1,0 +1,324 @@
+name: Validate Release (Dry Run)
+
+# Manual workflow to validate release configuration without actually releasing
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to validate (e.g., 1.0.0) - no tag will be created'
+        required: true
+        type: string
+
+# Read-only permissions for validation
+permissions:
+  contents: read
+
+jobs:
+  validate-code:
+    name: Validate Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.9'
+
+      - name: Run tests
+        run: |
+          echo "🧪 Running all tests with race detection..."
+          go test -race -covermode=atomic ./...
+
+      - name: Run linter
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=5m
+
+      - name: Build for all platforms
+        run: |
+          echo "🔨 Building for all platforms..."
+          make build-all
+
+      - name: Validation summary
+        run: |
+          echo "## ✅ Code Validation Passed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Tests: ✅ Passed" >> $GITHUB_STEP_SUMMARY
+          echo "- Linter: ✅ Passed" >> $GITHUB_STEP_SUMMARY
+          echo "- Build: ✅ Success" >> $GITHUB_STEP_SUMMARY
+
+  validate-goreleaser-config:
+    name: Validate GoReleaser Config
+    runs-on: ubuntu-latest
+    needs: validate-code
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.9'
+
+      - name: Validate GoReleaser configuration
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: check
+
+      - name: Config summary
+        run: |
+          echo "## ✅ GoReleaser Configuration Valid" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Configuration file: .goreleaser.yml" >> $GITHUB_STEP_SUMMARY
+          echo "Syntax: Valid" >> $GITHUB_STEP_SUMMARY
+
+  validate-github-release:
+    name: Validate → GitHub Release
+    runs-on: ubuntu-latest
+    needs: validate-goreleaser-config
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.9'
+
+      - name: Dry-run GitHub release build
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: build --snapshot --clean --skip=brews,chocolateys,scoops
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check artifacts
+        run: |
+          echo "## 📦 GitHub Release Artifacts (Dry Run)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Binaries built:" >> $GITHUB_STEP_SUMMARY
+          find dist -name 'gopher*' -type f ! -name '*.tar.gz' ! -name '*.zip' ! -name '*.deb' ! -name '*.rpm' ! -name '*.apk' | head -10 | while read file; do
+            echo "- \`$(basename $file)\` ($(du -h "$file" | cut -f1))" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Archives that would be created:" >> $GITHUB_STEP_SUMMARY
+          find dist -name '*.tar.gz' -o -name '*.zip' | while read file; do
+            echo "- \`$(basename $file)\` ($(du -h "$file" | cut -f1))" >> $GITHUB_STEP_SUMMARY
+          done
+
+  validate-homebrew:
+    name: Validate → Homebrew
+    runs-on: ubuntu-latest
+    needs: validate-goreleaser-config
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.9'
+
+      - name: Check Homebrew token
+        run: |
+          if [ -z "${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}" ]; then
+            echo "⚠️ HOMEBREW_TAP_GITHUB_TOKEN is not set" >> $GITHUB_STEP_SUMMARY
+            echo "Homebrew publishing would fail" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ HOMEBREW_TAP_GITHUB_TOKEN is configured" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Check Homebrew repo access
+        run: |
+          if curl -s -H "Authorization: token ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}" \
+             https://api.github.com/repos/molmedoz/homebrew-tap | grep -q '"full_name"'; then
+            echo "✅ **Homebrew**: Can access molmedoz/homebrew-tap" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Homebrew**: Cannot access molmedoz/homebrew-tap" >> $GITHUB_STEP_SUMMARY
+          fi
+        continue-on-error: true
+
+  validate-chocolatey:
+    name: Validate → Chocolatey
+    runs-on: ubuntu-latest
+    needs: validate-goreleaser-config
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.9'
+
+      - name: Dry-run Chocolatey package build
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: build --snapshot --clean --skip=brews,nfpms,scoops
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check Chocolatey package
+        run: |
+          if find dist -name '*.nupkg' | grep -q .; then
+            echo "✅ **Chocolatey**: Package builds successfully" >> $GITHUB_STEP_SUMMARY
+            find dist -name '*.nupkg' | while read file; do
+              echo "- \`$(basename $file)\` ($(du -h "$file" | cut -f1))" >> $GITHUB_STEP_SUMMARY
+            done
+          else
+            echo "⚠️ **Chocolatey**: No .nupkg files generated" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Check API key
+        run: |
+          if [ -z "${{ secrets.CHOCOLATEY_API_KEY }}" ]; then
+            echo "ℹ️ CHOCOLATEY_API_KEY not set - package would build but not publish" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ CHOCOLATEY_API_KEY is configured" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  validate-linux-packages:
+    name: Validate → Linux Packages
+    runs-on: ubuntu-latest
+    needs: validate-goreleaser-config
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.9'
+
+      - name: Dry-run Linux packages build
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: build --snapshot --clean --skip=brews,chocolateys,scoops
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check Linux packages
+        run: |
+          echo "## 📦 Linux Packages (Dry Run)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if find dist -name '*.deb' | grep -q .; then
+            echo "✅ **Debian/Ubuntu (.deb)**:" >> $GITHUB_STEP_SUMMARY
+            find dist -name '*.deb' | while read file; do
+              echo "- \`$(basename $file)\`" >> $GITHUB_STEP_SUMMARY
+            done
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if find dist -name '*.rpm' | grep -q .; then
+            echo "✅ **Red Hat/Fedora (.rpm)**:" >> $GITHUB_STEP_SUMMARY
+            find dist -name '*.rpm' | while read file; do
+              echo "- \`$(basename $file)\`" >> $GITHUB_STEP_SUMMARY
+            done
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if find dist -name '*.apk' | grep -q .; then
+            echo "✅ **Alpine (.apk)**:" >> $GITHUB_STEP_SUMMARY
+            find dist -name '*.apk' | while read file; do
+              echo "- \`$(basename $file)\`" >> $GITHUB_STEP_SUMMARY
+            done
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  validate-scoop:
+    name: Validate → Scoop
+    runs-on: ubuntu-latest
+    needs: validate-goreleaser-config
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check Scoop bucket
+        run: |
+          if curl -s https://api.github.com/repos/molmedoz/scoop-bucket | grep -q '"full_name"'; then
+            echo "✅ **Scoop**: Bucket repository exists" >> $GITHUB_STEP_SUMMARY
+            echo "Will publish to: https://github.com/molmedoz/scoop-bucket" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "ℹ️ **Scoop**: Bucket doesn't exist (skip_upload: auto)" >> $GITHUB_STEP_SUMMARY
+            echo "Create with: \`gh repo create molmedoz/scoop-bucket --public\`" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  summary:
+    name: Validation Summary
+    runs-on: ubuntu-latest
+    needs: 
+      - validate-code
+      - validate-goreleaser-config
+      - validate-github-release
+      - validate-homebrew
+      - validate-chocolatey
+      - validate-linux-packages
+      - validate-scoop
+    if: always()
+    steps:
+      - name: Generate final summary
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          ## 🎉 Validation Complete (Dry Run)
+          
+          ### Results:
+          - Code validation: ${{ needs.validate-code.result == 'success' && '✅' || '❌' }}
+          - GoReleaser config: ${{ needs.validate-goreleaser-config.result == 'success' && '✅' || '❌' }}
+          - GitHub release build: ${{ needs.validate-github-release.result == 'success' && '✅' || '❌' }}
+          - Homebrew setup: ${{ needs.validate-homebrew.result == 'success' && '✅' || '❌' }}
+          - Chocolatey build: ${{ needs.validate-chocolatey.result == 'success' && '✅' || '❌' }}
+          - Linux packages: ${{ needs.validate-linux-packages.result == 'success' && '✅' || '❌' }}
+          - Scoop setup: ${{ needs.validate-scoop.result == 'success' && '✅' || '❌' }}
+          
+          ### ✅ Ready to Release?
+          
+          ${{ needs.validate-code.result == 'success' && needs.validate-goreleaser-config.result == 'success' && needs.validate-github-release.result == 'success' && '**YES** - All critical validations passed!' || '**NO** - Fix errors above before releasing' }}
+          
+          ### Next Steps:
+          
+          If validation passed, create a real release:
+          ```bash
+          gh workflow run create-release.yml -f version=${{ github.event.inputs.version }}
+          ```
+          
+          Or create a draft to review first:
+          ```bash
+          gh workflow run create-release.yml -f version=${{ github.event.inputs.version }} -f draft=true
+          ```
+          EOF
+      
+      - name: Check if ready to release
+        run: |
+          if [ "${{ needs.validate-code.result }}" != "success" ] || \
+             [ "${{ needs.validate-goreleaser-config.result }}" != "success" ] || \
+             [ "${{ needs.validate-github-release.result }}" != "success" ]; then
+            echo "❌ Validation failed - not ready to release"
+            exit 1
+          else
+            echo "✅ All validations passed - ready to release!"
+          fi
+
