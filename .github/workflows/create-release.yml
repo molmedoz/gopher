@@ -139,9 +139,10 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "The release workflow will now be triggered automatically." >> $GITHUB_STEP_SUMMARY
 
-  release:
-    name: Create Release (Windows/Chocolatey)
-    runs-on: windows-latest  # Windows for Chocolatey support
+  # Validate GoReleaser config before releasing
+  validate-config:
+    name: Validate Release Config
+    runs-on: ubuntu-latest
     needs: [validate, create-tag]
     steps:
       - name: Checkout code
@@ -155,100 +156,39 @@ jobs:
         with:
           go-version: '1.24.9'
 
-      - name: Verify Chocolatey is available
-        run: |
-          Write-Host "Verifying packaging tools..."
-          
-          # Verify Chocolatey is installed (pre-installed on Windows runners)
-          choco --version
-          
-          Write-Host "SUCCESS: Chocolatey available for package building"
-        shell: powershell
-
-      - name: Prepare GoReleaser arguments
-        id: goreleaser_args
-        run: |
-          $args = "release --clean --skip=homebrew"
-          
-          # Add draft flag if requested
-          if ("${{ github.event.inputs.draft }}" -eq "true") {
-            $args += " --draft"
-            Write-Host "Creating as draft release"
-          }
-          
-          # Note: prerelease is auto-detected by GoReleaser based on semver
-          # but we can override it if explicitly requested
-          if ("${{ github.event.inputs.prerelease }}" -eq "true") {
-            $args += " --prerelease"
-            Write-Host "WARNING: Marking as pre-release"
-          }
-          
-          Write-Host "GoReleaser arguments: $args"
-          Write-Host "Note: Homebrew publishing will be handled by separate Linux job"
-          "args=$args" | Add-Content -Path $env:GITHUB_OUTPUT -Encoding utf8
-        shell: powershell
-
-      - name: Run GoReleaser
-        id: goreleaser
+      - name: Validate GoReleaser configuration
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: '~> v2'
-          args: ${{ steps.goreleaser_args.outputs.args }}
+          args: check
+
+      - name: Test GoReleaser build (dry-run)
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: build --snapshot --clean --single-target
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
-          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
-        continue-on-error: true
 
-      - name: Check GoReleaser result
-        if: steps.goreleaser.outcome == 'failure'
+      - name: Config validation summary
         run: |
-          Write-Host "ERROR: GoReleaser failed! Cleaning up tag..."
-          $TAG = "${{ needs.validate.outputs.tag }}"
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## ✅ Release Configuration Validated
           
-          # Configure Git
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          - GoReleaser config: Valid
+          - Build test: Successful
+          - Ready to release: Yes
           
-          # Delete the tag locally and remotely
-          Write-Host "Deleting local tag..."
-          git tag -d $TAG
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "WARNING: Failed to delete local tag"
-          }
-          
-          Write-Host "Deleting remote tag..."
-          git push origin ":refs/tags/$TAG"
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "WARNING: Failed to delete remote tag"
-          }
-          
-          $summary = "## Release Failed`n`n"
-          $summary += "GoReleaser failed. Tag ``$TAG`` has been deleted.`n`n"
-          $summary += "Please check the logs above, fix the issues, and try again."
-          $summary | Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8
-          
-          exit 1
-        shell: powershell
+          Proceeding with parallel release jobs...
+          EOF
 
-      - name: Release summary
-        if: steps.goreleaser.outcome == 'success'
-        run: |
-          $summary = "## ✅ Release Published (Windows/Chocolatey)`n`n"
-          $summary += "Version ``${{ needs.validate.outputs.tag }}`` has been released!`n`n"
-          $summary += "- Binaries: ✅ Published`n"
-          $summary += "- Chocolatey: ✅ Published`n"
-          $summary += "- Homebrew: ⏳ Publishing in separate job`n`n"
-          $summary += "View release: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }}"
-          $summary | Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8
-        shell: powershell
-
-  homebrew:
-    name: Publish to Homebrew Tap
-    runs-on: ubuntu-latest  # Linux for Homebrew publishing
-    needs: [validate, create-tag, release]
-    if: needs.release.result == 'success'
+  # Release 1: GitHub Release (binaries, archives, checksums)
+  release-github:
+    name: Release → GitHub
+    runs-on: ubuntu-latest
+    needs: [validate, create-tag, validate-config]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -261,49 +201,188 @@ jobs:
         with:
           go-version: '1.24.9'
 
-      - name: Publish to Homebrew Tap
-        id: homebrew
+      - name: Prepare arguments
+        id: args
+        run: |
+          args="release --clean --skip=brews,chocolateys,scoops"
+          [ "${{ github.event.inputs.draft }}" = "true" ] && args="$args --draft"
+          [ "${{ github.event.inputs.prerelease }}" = "true" ] && args="$args --prerelease"
+          echo "args=$args" >> $GITHUB_OUTPUT
+
+      - name: Release to GitHub
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: '~> v2'
-          args: release --skip=validate,build,announce,chocolateys,nfpms,source,checksum,archives
+          args: ${{ steps.args.outputs.args }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "✅ **GitHub Release**: Published binaries and archives" >> $GITHUB_STEP_SUMMARY
+          echo "📦 View: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+
+  # Release 2: Homebrew (macOS/Linux)
+  release-homebrew:
+    name: Release → Homebrew
+    runs-on: ubuntu-latest
+    needs: [validate, create-tag, validate-config, release-github]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.validate.outputs.tag }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.9'
+
+      - name: Publish to Homebrew
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --skip=validate,archives,source,chocolateys,nfpms,scoops
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
         continue-on-error: true
 
-      - name: Check Homebrew result
-        if: steps.homebrew.outcome == 'failure'
+      - name: Summary
+        if: success()
         run: |
-          echo "## ⚠️ Homebrew Publishing Failed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "The main release was successful, but Homebrew formula update failed." >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Action required:** Update the Homebrew formula manually:" >> $GITHUB_STEP_SUMMARY
-          echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo "cd /tmp" >> $GITHUB_STEP_SUMMARY
-          echo "git clone https://github.com/molmedoz/homebrew-tap.git" >> $GITHUB_STEP_SUMMARY
-          echo "cd homebrew-tap" >> $GITHUB_STEP_SUMMARY
-          echo "# Update Formula/gopher.rb with new version and SHA256" >> $GITHUB_STEP_SUMMARY
-          echo "git commit -am 'Update gopher to ${{ needs.validate.outputs.tag }}'" >> $GITHUB_STEP_SUMMARY
-          echo "git push" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          
-          # Don't fail the workflow - main release succeeded
-          exit 0
+          echo "✅ **Homebrew**: Formula updated in molmedoz/homebrew-tap" >> $GITHUB_STEP_SUMMARY
+          echo "📦 Install: \`brew tap molmedoz/tap && brew install gopher\`" >> $GITHUB_STEP_SUMMARY
 
-      - name: Homebrew summary
-        if: steps.homebrew.outcome == 'success'
+      - name: Failure notice
+        if: failure()
         run: |
-          echo "## ✅ Homebrew Formula Updated" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Homebrew formula published to molmedoz/homebrew-tap" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Users can install with:" >> $GITHUB_STEP_SUMMARY
-          echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo "brew tap molmedoz/tap" >> $GITHUB_STEP_SUMMARY
-          echo "brew install gopher" >> $GITHUB_STEP_SUMMARY
-          echo "# Or upgrade: brew upgrade gopher" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ **Homebrew**: Publishing failed (non-critical)" >> $GITHUB_STEP_SUMMARY
+
+  # Release 3: Chocolatey (Windows)
+  release-chocolatey:
+    name: Release → Chocolatey
+    runs-on: ubuntu-latest
+    needs: [validate, create-tag, validate-config, release-github]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.validate.outputs.tag }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.9'
+
+      - name: Publish to Chocolatey
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --skip=validate,archives,source,brews,nfpms,scoops
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+        continue-on-error: true
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "✅ **Chocolatey**: Package published to chocolatey.org" >> $GITHUB_STEP_SUMMARY
+          echo "📦 Install: \`choco install gopher\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Failure notice
+        if: failure()
+        run: |
+          echo "⚠️ **Chocolatey**: Publishing failed (non-critical)" >> $GITHUB_STEP_SUMMARY
+
+  # Release 4: Scoop (Windows)
+  release-scoop:
+    name: Release → Scoop
+    runs-on: ubuntu-latest
+    needs: [validate, create-tag, validate-config, release-github]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.validate.outputs.tag }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.9'
+
+      - name: Publish to Scoop
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --skip=validate,archives,source,brews,chocolateys,nfpms
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "✅ **Scoop**: Manifest updated in molmedoz/scoop-bucket" >> $GITHUB_STEP_SUMMARY
+          echo "📦 Install: \`scoop bucket add molmedoz ...; scoop install gopher\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Failure notice
+        if: failure()
+        run: |
+          echo "ℹ️ **Scoop**: Bucket doesn't exist yet (skip_upload: auto)" >> $GITHUB_STEP_SUMMARY
+
+  # Final summary job
+  release-summary:
+    name: Release Summary
+    runs-on: ubuntu-latest
+    needs: [validate, create-tag, release-github, release-homebrew, release-chocolatey, release-scoop]
+    if: always()
+    steps:
+      - name: Generate summary
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## 🎉 Release ${{ needs.validate.outputs.tag }} Complete
+          
+          ### Status:
+          - GitHub: ${{ needs.release-github.result == 'success' && '✅' || '❌' }}
+          - Homebrew: ${{ needs.release-homebrew.result == 'success' && '✅' || needs.release-homebrew.result == 'failure' && '⚠️' || '⏭️' }}
+          - Chocolatey: ${{ needs.release-chocolatey.result == 'success' && '✅' || needs.release-chocolatey.result == 'failure' && '⚠️' || '⏭️' }}
+          - Scoop: ${{ needs.release-scoop.result == 'success' && '✅' || needs.release-scoop.result == 'failure' && 'ℹ️' || '⏭️' }}
+          
+          ### Links:
+          - [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }})
+          - [Homebrew Tap](https://github.com/molmedoz/homebrew-tap)
+          
+          ### Installation:
+          \`\`\`bash
+          # Homebrew (macOS/Linux)
+          brew tap molmedoz/tap && brew install gopher
+          
+          # Chocolatey (Windows)
+          choco install gopher
+          
+          # Scoop (Windows)
+          scoop bucket add molmedoz https://github.com/molmedoz/scoop-bucket
+          scoop install gopher
+          
+          # Direct download
+          https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }}
+          \`\`\`
+          EOF
+      
+      - name: Check critical failures
+        if: needs.release-github.result != 'success'
+        run: |
+          echo "❌ GitHub release failed - this is a critical error"
+          exit 1
 

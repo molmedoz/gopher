@@ -1,0 +1,415 @@
+name: Release to Specific Channel
+
+# Deploy to specific distribution channels independently
+# Useful for: fixing failed deployments, testing, re-publishing
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Git tag to release (e.g., v1.0.0) - must already exist'
+        required: true
+        type: string
+      channels:
+        description: 'Channels to deploy to (comma-separated: github,homebrew,chocolatey,scoop,all)'
+        required: true
+        type: choice
+        options:
+          - github
+          - homebrew
+          - chocolatey
+          - scoop
+          - homebrew,chocolatey,scoop
+          - all
+      draft:
+        description: 'Create GitHub release as draft?'
+        required: false
+        type: boolean
+        default: false
+
+# Minimal permissions - only what's needed
+permissions:
+  contents: write
+
+jobs:
+  # Validate that the tag exists
+  validate-tag:
+    name: Validate Tag
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.check.outputs.tag }}
+      deploy_github: ${{ steps.parse.outputs.deploy_github }}
+      deploy_homebrew: ${{ steps.parse.outputs.deploy_homebrew }}
+      deploy_chocolatey: ${{ steps.parse.outputs.deploy_chocolatey }}
+      deploy_scoop: ${{ steps.parse.outputs.deploy_scoop }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if tag exists
+        id: check
+        run: |
+          TAG="${{ github.event.inputs.tag }}"
+          
+          # Add 'v' prefix if not present
+          if [[ ! "$TAG" =~ ^v ]]; then
+            TAG="v${TAG}"
+          fi
+          
+          echo "Checking for tag: $TAG"
+          
+          if ! git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "❌ Error: Tag $TAG does not exist!"
+            echo "Available tags:"
+            git tag -l | tail -10
+            exit 1
+          fi
+          
+          echo "✅ Tag $TAG exists"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Parse channels
+        id: parse
+        run: |
+          CHANNELS="${{ github.event.inputs.channels }}"
+          
+          echo "Requested channels: $CHANNELS"
+          
+          # Parse which channels to deploy to
+          if [[ "$CHANNELS" == "all" ]]; then
+            echo "deploy_github=true" >> $GITHUB_OUTPUT
+            echo "deploy_homebrew=true" >> $GITHUB_OUTPUT
+            echo "deploy_chocolatey=true" >> $GITHUB_OUTPUT
+            echo "deploy_scoop=true" >> $GITHUB_OUTPUT
+          else
+            [[ "$CHANNELS" == *"github"* ]] && echo "deploy_github=true" >> $GITHUB_OUTPUT || echo "deploy_github=false" >> $GITHUB_OUTPUT
+            [[ "$CHANNELS" == *"homebrew"* ]] && echo "deploy_homebrew=true" >> $GITHUB_OUTPUT || echo "deploy_homebrew=false" >> $GITHUB_OUTPUT
+            [[ "$CHANNELS" == *"chocolatey"* ]] && echo "deploy_chocolatey=true" >> $GITHUB_OUTPUT || echo "deploy_chocolatey=false" >> $GITHUB_OUTPUT
+            [[ "$CHANNELS" == *"scoop"* ]] && echo "deploy_scoop=true" >> $GITHUB_OUTPUT || echo "deploy_scoop=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Summary
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## 🎯 Deployment Plan
+          
+          **Tag**: \`${{ steps.check.outputs.tag }}\`
+          
+          **Channels to deploy**:
+          - GitHub: ${{ steps.parse.outputs.deploy_github == 'true' && '✅' || '⏭️ Skip' }}
+          - Homebrew: ${{ steps.parse.outputs.deploy_homebrew == 'true' && '✅' || '⏭️ Skip' }}
+          - Chocolatey: ${{ steps.parse.outputs.deploy_chocolatey == 'true' && '✅' || '⏭️ Skip' }}
+          - Scoop: ${{ steps.parse.outputs.deploy_scoop == 'true' && '✅' || '⏭️ Skip' }}
+          EOF
+
+  # Deploy to GitHub Releases
+  release-github:
+    name: Deploy → GitHub
+    runs-on: ubuntu-latest
+    needs: validate-tag
+    if: needs.validate-tag.outputs.deploy_github == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.validate-tag.outputs.tag }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.9'
+
+      - name: Release to GitHub
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --clean --skip=brews,chocolateys,scoops${{ github.event.inputs.draft == 'true' && ' --draft' || '' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        if: success()
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## ✅ GitHub Release
+          
+          Successfully published to GitHub Releases!
+          
+          **Release**: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate-tag.outputs.tag }}
+          
+          **Includes**:
+          - Binaries for all platforms (Linux, macOS, Windows)
+          - Archives (.tar.gz, .zip)
+          - Checksums (SHA256)
+          - Linux packages (.deb, .rpm, .apk, archlinux)
+          - Source code
+          EOF
+
+  # Deploy to Homebrew
+  release-homebrew:
+    name: Deploy → Homebrew
+    runs-on: ubuntu-latest
+    needs: validate-tag
+    if: needs.validate-tag.outputs.deploy_homebrew == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.validate-tag.outputs.tag }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.9'
+
+      - name: Check release exists
+        run: |
+          TAG="${{ needs.validate-tag.outputs.tag }}"
+          
+          # Check if GitHub release exists
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            echo "⚠️ Warning: GitHub release $TAG does not exist"
+            echo "Homebrew needs the release to exist with assets"
+            echo ""
+            echo "Run this first:"
+            echo "  gh workflow run release-channel.yml -f tag=$TAG -f channels=github"
+            exit 1
+          fi
+          
+          echo "✅ GitHub release exists"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to Homebrew
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --skip=validate,archives,source,chocolateys,nfpms,scoops
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+
+      - name: Summary
+        if: success()
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## ✅ Homebrew
+          
+          Formula updated in molmedoz/homebrew-tap
+          
+          **Install**:
+          \`\`\`bash
+          brew tap molmedoz/tap
+          brew install gopher
+          # Or upgrade: brew upgrade gopher
+          \`\`\`
+          
+          **Repository**: https://github.com/molmedoz/homebrew-tap
+          EOF
+
+  # Deploy to Chocolatey
+  release-chocolatey:
+    name: Deploy → Chocolatey
+    runs-on: ubuntu-latest
+    needs: validate-tag
+    if: needs.validate-tag.outputs.deploy_chocolatey == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.validate-tag.outputs.tag }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.9'
+
+      - name: Check release exists
+        run: |
+          TAG="${{ needs.validate-tag.outputs.tag }}"
+          
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            echo "⚠️ Warning: GitHub release $TAG does not exist"
+            echo "Chocolatey needs the release to exist with assets"
+            echo ""
+            echo "Run this first:"
+            echo "  gh workflow run release-channel.yml -f tag=$TAG -f channels=github"
+            exit 1
+          fi
+          
+          echo "✅ GitHub release exists"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to Chocolatey
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --skip=validate,archives,source,brews,nfpms,scoops
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+
+      - name: Summary
+        if: success()
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## ✅ Chocolatey
+          
+          Package published to chocolatey.org
+          
+          **Install**:
+          \`\`\`powershell
+          choco install gopher
+          # Or upgrade: choco upgrade gopher
+          \`\`\`
+          
+          **Package**: https://community.chocolatey.org/packages/gopher
+          EOF
+
+  # Deploy to Scoop
+  release-scoop:
+    name: Deploy → Scoop
+    runs-on: ubuntu-latest
+    needs: validate-tag
+    if: needs.validate-tag.outputs.deploy_scoop == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.validate-tag.outputs.tag }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.9'
+
+      - name: Check release exists
+        run: |
+          TAG="${{ needs.validate-tag.outputs.tag }}"
+          
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            echo "⚠️ Warning: GitHub release $TAG does not exist"
+            echo "Scoop needs the release to exist with assets"
+            echo ""
+            echo "Run this first:"
+            echo "  gh workflow run release-channel.yml -f tag=$TAG -f channels=github"
+            exit 1
+          fi
+          
+          echo "✅ GitHub release exists"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to Scoop
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --skip=validate,archives,source,brews,chocolateys,nfpms
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+
+      - name: Summary
+        if: success()
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## ✅ Scoop
+          
+          Manifest updated in molmedoz/scoop-bucket
+          
+          **Install**:
+          \`\`\`bash
+          scoop bucket add molmedoz https://github.com/molmedoz/scoop-bucket
+          scoop install gopher
+          # Or upgrade: scoop update gopher
+          \`\`\`
+          
+          **Repository**: https://github.com/molmedoz/scoop-bucket
+          EOF
+
+  # Summary of all deployments
+  deployment-summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [validate-tag, release-github, release-homebrew, release-chocolatey, release-scoop]
+    if: always()
+    steps:
+      - name: Generate summary
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## 🎉 Deployment Complete
+          
+          **Tag**: \`${{ needs.validate-tag.outputs.tag }}\`
+          
+          ### Results:
+          EOF
+          
+          # GitHub
+          if [ "${{ needs.validate-tag.outputs.deploy_github }}" = "true" ]; then
+            if [ "${{ needs.release-github.result }}" = "success" ]; then
+              echo "- ✅ **GitHub**: Published successfully" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ❌ **GitHub**: Failed" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "- ⏭️ **GitHub**: Skipped" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Homebrew
+          if [ "${{ needs.validate-tag.outputs.deploy_homebrew }}" = "true" ]; then
+            if [ "${{ needs.release-homebrew.result }}" = "success" ]; then
+              echo "- ✅ **Homebrew**: Published successfully" >> $GITHUB_STEP_SUMMARY
+            elif [ "${{ needs.release-homebrew.result }}" = "skipped" ]; then
+              echo "- ⏭️ **Homebrew**: Skipped (GitHub release needed first)" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ❌ **Homebrew**: Failed" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "- ⏭️ **Homebrew**: Skipped" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Chocolatey
+          if [ "${{ needs.validate-tag.outputs.deploy_chocolatey }}" = "true" ]; then
+            if [ "${{ needs.release-chocolatey.result }}" = "success" ]; then
+              echo "- ✅ **Chocolatey**: Published successfully" >> $GITHUB_STEP_SUMMARY
+            elif [ "${{ needs.release-chocolatey.result }}" = "skipped" ]; then
+              echo "- ⏭️ **Chocolatey**: Skipped (GitHub release needed first)" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ❌ **Chocolatey**: Failed" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "- ⏭️ **Chocolatey**: Skipped" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Scoop
+          if [ "${{ needs.validate-tag.outputs.deploy_scoop }}" = "true" ]; then
+            if [ "${{ needs.release-scoop.result }}" = "success" ]; then
+              echo "- ✅ **Scoop**: Published successfully" >> $GITHUB_STEP_SUMMARY
+            elif [ "${{ needs.release-scoop.result }}" = "skipped" ]; then
+              echo "- ⏭️ **Scoop**: Skipped (GitHub release needed first)" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ❌ **Scoop**: Failed" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "- ⏭️ **Scoop**: Skipped" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          
+          ### Links:
+          - [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate-tag.outputs.tag }})
+          - [Homebrew Tap](https://github.com/molmedoz/homebrew-tap)
+          - [Chocolatey Package](https://community.chocolatey.org/packages/gopher)
+          - [Scoop Bucket](https://github.com/molmedoz/scoop-bucket)
+          EOF
+

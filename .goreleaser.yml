@@ -421,6 +421,83 @@ source:
   name_template: '{{ .ProjectName }}-{{ .Version }}-source'
   format: 'tar.gz'
 
+# Scoop (Windows package manager)
+scoops:
+  - repository:
+      owner: molmedoz
+      name: scoop-bucket
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    
+    # Commit author
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    
+    # Commit message
+    commit_msg_template: "Scoop update for {{ .ProjectName }} version {{ .Tag }}"
+    
+    # Homepage
+    homepage: "https://github.com/molmedoz/gopher"
+    
+    # Description
+    description: "A simple, fast, and dependency-free Go version manager written in Go"
+    
+    # License
+    license: "MIT"
+    
+    # Skip if repo doesn't exist yet
+    skip_upload: auto
+
+# AUR (Arch User Repository) packages
+aurs:
+  - name: gopher-bin
+    
+    # AUR repository (needs to be created)
+    # homepage: https://github.com/molmedoz/gopher
+    # description: "A simple, fast, and dependency-free Go version manager"
+    # maintainers:
+    #   - 'molmedoz <your-email@example.com>'
+    # license: MIT
+    # private_key: '{{ .Env.AUR_SSH_PRIVATE_KEY }}'
+    
+    # Skip for now - requires AUR account setup
+    skip_upload: true
+
+# Winget (Windows Package Manager)
+winget:
+  - name: gopher
+    publisher: molmedoz
+    license: MIT
+    homepage: https://github.com/molmedoz/gopher
+    short_description: "Go version manager"
+    description: "A simple, fast, and dependency-free Go version manager written in Go"
+    repository:
+      owner: molmedoz
+      name: winget-pkgs
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    
+    # Skip for now - requires Microsoft winget-pkgs fork
+    skip_upload: true
+
+# Docker images
+dockers:
+  - image_templates:
+      - "ghcr.io/molmedoz/{{ .ProjectName }}:{{ .Version }}"
+      - "ghcr.io/molmedoz/{{ .ProjectName }}:latest"
+    
+    dockerfile: Dockerfile.release
+    
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source=https://github.com/molmedoz/gopher"
+    
+    # Skip for now - needs Dockerfile.release
+    skip_push: true
+
 # Announce (optional)
 # announces:
 #   - provider: twitter
