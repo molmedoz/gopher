@@ -40,7 +40,7 @@ jobs:
         run: go test -v -race -coverprofile=coverage-${{ matrix.go-version }}-${{ matrix.os }}.out -covermode=atomic ./...
 
       - name: Upload coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: coverage-${{ matrix.go-version }}-${{ matrix.os }}
           path: coverage-${{ matrix.go-version }}-${{ matrix.os }}.out
