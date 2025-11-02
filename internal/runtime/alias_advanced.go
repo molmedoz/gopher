@@ -301,6 +301,7 @@ func (am *AliasManager) exportToJSON(filename string, aliases map[string]*Alias)
 	}
 
 	// Write to file
+	// #nosec G306 -- 0644 acceptable for aliases file (user-managed aliases)
 	if err := os.WriteFile(filename, data, 0644); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
@@ -311,6 +312,7 @@ func (am *AliasManager) exportToJSON(filename string, aliases map[string]*Alias)
 // importFromJSON imports aliases from JSON file
 func (am *AliasManager) importFromJSON(filename string) (map[string]string, error) {
 	// Read file
+	// #nosec G304 -- filename is user-provided alias file path (validated by caller)
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)

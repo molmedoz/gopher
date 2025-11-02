@@ -96,6 +96,7 @@ func SetupMockDownloadScenario(t *testing.T, version, filename string) (*Downloa
 
 // AssertFileContent checks if a file contains expected content
 func AssertFileContent(t *testing.T, filePath, expectedContent string) {
+	// #nosec G304 -- filePath is from test helper, test-only code
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		t.Fatalf("Failed to read file %s: %v", filePath, err)
@@ -122,9 +123,11 @@ func AssertFileNotExists(t *testing.T, filePath string) {
 // CreateTestFile creates a test file with specified content
 func CreateTestFile(t *testing.T, filePath, content string) {
 	dir := filepath.Dir(filePath)
+	// #nosec G301 -- 0755 acceptable for test directory
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		t.Fatalf("Failed to create directory %s: %v", dir, err)
 	}
+	// #nosec G306 -- 0644 acceptable for test file
 	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
 		t.Fatalf("Failed to create test file %s: %v", filePath, err)
 	}

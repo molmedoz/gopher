@@ -1400,6 +1400,8 @@ func showPersistenceStatus(manager *inruntime.Manager) error {
 	stateExists := false
 	var activeVersion string
 
+	// stateFile is constructed from validated config.InstallDir
+	// #nosec G304 -- path validated through config system
 	if content, err := os.ReadFile(stateFile); err == nil {
 		stateExists = true
 		lines := strings.Split(string(content), "\n")
@@ -1417,6 +1419,7 @@ func showPersistenceStatus(manager *inruntime.Manager) error {
 	profileExists := false
 	integrationExists := false
 
+	// #nosec G304 -- profilePath is user's shell profile file (validated path)
 	if content, err := os.ReadFile(profilePath); err == nil {
 		profileExists = true
 		integrationExists = strings.Contains(string(content), "gopher-init.sh")
@@ -1511,6 +1514,7 @@ func showPersistenceStatus(manager *inruntime.Manager) error {
 
 func createGopherInitScript(manager *inruntime.Manager) (string, error) {
 	scriptDir := filepath.Join(manager.GetConfig().InstallDir, "..", "scripts")
+	// #nosec G301 -- 0755 required for executable scripts directory
 	if err := os.MkdirAll(scriptDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create script directory: %w", err)
 	}
@@ -1640,6 +1644,7 @@ alias gopher-install='gopher install'
 alias gopher-uninstall='gopher uninstall'
 `
 
+	// #nosec G306 -- 0755 required for executable script
 	if err := os.WriteFile(scriptPath, []byte(scriptContent), 0755); err != nil {
 		return "", fmt.Errorf("failed to write init script: %w", err)
 	}
@@ -1753,6 +1758,7 @@ func getShellProfile(shell string) (string, error) {
 
 func addToShellProfile(profilePath, initScript string) error {
 	// Check if gopher is already in the profile
+	// #nosec G304 -- profilePath is user's shell profile file (validated path)
 	content, err := os.ReadFile(profilePath)
 	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to read profile: %w", err)
@@ -1768,6 +1774,7 @@ func addToShellProfile(profilePath, initScript string) error {
 	initLine := fmt.Sprintf("\n# Gopher Go Version Manager\nsource %s\n", initScript)
 
 	// Append to profile
+	// #nosec G306 -- 0644 required for shell profile files (must be readable by shell)
 	if err := os.WriteFile(profilePath, []byte(profileContent+initLine), 0644); err != nil {
 		return fmt.Errorf("failed to write profile: %w", err)
 	}

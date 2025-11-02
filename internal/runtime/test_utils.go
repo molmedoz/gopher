@@ -13,6 +13,7 @@ import (
 func writeMetadata(t *testing.T, dir, version string) {
 	t.Helper()
 	vdir := filepath.Join(dir, version)
+	// #nosec G301 -- 0755 acceptable for test directory
 	if err := os.MkdirAll(vdir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -22,6 +23,7 @@ func writeMetadata(t *testing.T, dir, version string) {
 		"arch=amd64\n" +
 		"installed_at=2023-01-01T00:00:00Z\n" +
 		"install_dir=" + vdir + "\n"
+	// #nosec G306 -- 0644 acceptable for test files
 	if err := os.WriteFile(f, []byte(content), 0644); err != nil {
 		t.Fatal(err)
 	}

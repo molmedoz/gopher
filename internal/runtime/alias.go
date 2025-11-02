@@ -59,8 +59,9 @@ func (am *AliasManager) SaveAliases() error {
 	defer am.mu.RUnlock()
 
 	// Ensure directory exists
+	// Use 0750 for aliases directory - private user data
 	dir := filepath.Dir(am.aliasesFile)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return fmt.Errorf("failed to create aliases directory: %w", err)
 	}
 
@@ -71,6 +72,7 @@ func (am *AliasManager) SaveAliases() error {
 	}
 
 	// Write to file
+	// #nosec G306 -- 0644 acceptable for aliases file (user-managed aliases)
 	if err := os.WriteFile(am.aliasesFile, data, 0644); err != nil {
 		return fmt.Errorf("failed to write aliases file: %w", err)
 	}

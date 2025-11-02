@@ -112,7 +112,7 @@ func (tw *terminalWriter) printUnixLine(line string) {
 		// Use fmt.Printf with explicit format - no automatic newline
 		// Explicitly flush stdout after write
 		fmt.Printf("\r%s%s", line, padding)
-		os.Stdout.Sync()
+		_ = os.Stdout.Sync() // Best effort - sync errors are rare and typically non-fatal
 	} else {
 		fmt.Fprintf(tw.output, "\r%s%s", line, padding)
 	}
@@ -135,7 +135,7 @@ func (tw *terminalWriter) clear() {
 func (tw *terminalWriter) flush() {
 	// For stdout, sync immediately
 	if tw.isStdout {
-		os.Stdout.Sync()
+		_ = os.Stdout.Sync() // Best effort - sync errors are rare and typically non-fatal
 		return
 	}
 

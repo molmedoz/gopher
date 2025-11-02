@@ -387,7 +387,10 @@ func (m *Manager) removeSymlinks() {
 			if target, err := os.Readlink(symlinkPath); err == nil {
 				if strings.Contains(target, ".gopher") {
 					// It's a Gopher symlink, remove it
-					os.Remove(symlinkPath)
+					if rerr := os.Remove(symlinkPath); rerr != nil && !os.IsNotExist(rerr) {
+						// Log but don't fail - cleanup is best effort
+						fmt.Printf("Warning: failed to remove symlink %s: %v\n", symlinkPath, rerr)
+					}
 				}
 			}
 		}

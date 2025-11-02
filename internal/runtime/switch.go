@@ -89,6 +89,9 @@ func (m *Manager) Use(version string) error {
 		return errors.Wrapf(err, errors.ErrCodeEnvironmentSetupFailed, "failed to setup environment")
 	}
 
+	// Check if GOPATH/bin is in PATH and alert user if not
+	m.checkGOPATHInPath(version)
+
 	// Save the active version for persistence
 	if err := m.saveActiveVersion(version); err != nil {
 		fmt.Printf("Warning: failed to save active version: %v\n", err)
@@ -211,6 +214,9 @@ func (m *Manager) useSystemVersion() error {
 	if err := m.setupSystemEnvironment(); err != nil {
 		return fmt.Errorf("failed to setup system environment: %w", err)
 	}
+
+	// Check if GOPATH/bin is in PATH for system Go
+	m.checkGOPATHInPath("system")
 
 	// Save the system version as active
 	if err := m.saveActiveVersion("system"); err != nil {

@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -32,9 +33,8 @@ func (sd *SystemDetectorImpl) DetectSystemGo() (*Version, error) {
 		return nil, fmt.Errorf("go not found in PATH: %w", err)
 	}
 
-	// Get the version by running 'go version'
-	cmd := exec.Command(goPath, "version")
-	output, err := cmd.Output()
+	// Get the version by running 'go version' with controlled context
+	output, err := runGoCommand("version")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get go version: %w", err)
 	}
@@ -163,22 +163,19 @@ func (sd *SystemDetectorImpl) GetSystemGoInfo() (*SystemGoInfo, error) {
 	}
 
 	// Get version
-	cmd := exec.Command(goPath, "version")
-	output, err := cmd.Output()
+	output, err := runGoCommand("version")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get go version: %w", err)
 	}
 
 	// Get GOROOT
-	cmd = exec.Command(goPath, "env", "GOROOT")
-	gorootOutput, err := cmd.Output()
+	gorootOutput, err := runGoCommand("env", "GOROOT")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get GOROOT: %w", err)
 	}
 
 	// Get GOPATH
-	cmd = exec.Command(goPath, "env", "GOPATH")
-	gopathOutput, err := cmd.Output()
+	gopathOutput, err := runGoCommand("env", "GOPATH")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get GOPATH: %w", err)
 	}
@@ -196,6 +193,20 @@ func (sd *SystemDetectorImpl) GetSystemGoInfo() (*SystemGoInfo, error) {
 		Executable: goPath,
 		IsValid:    true,
 	}, nil
+}
+
+// runGoCommand executes the system 'go' command with a short timeout and fixed binary name
+// to avoid executing arbitrary paths (addresses gosec G204).
+func runGoCommand(args ...string) ([]byte, error) {
+	// Resolve via PATH to ensure 'go' exists, but do not pass a variable path to exec
+	if _, err := exec.LookPath("go"); err != nil {
+		return nil, fmt.Errorf("go not found in PATH: %w", err)
+	}
+	// Use a context with timeout to prevent hanging commands
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "go", args...)
+	return cmd.Output()
 }
 
 // ============================================================================

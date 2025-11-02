@@ -45,6 +45,7 @@ func (i *Installer) Install(version, filePath string) error {
 	}
 
 	// Ensure install directory exists
+	// #nosec G301 -- 0755 required for Go installation directory (needs to be executable)
 	if err := os.MkdirAll(i.installDir, 0755); err != nil {
 		return fmt.Errorf("failed to create install directory: %w", err)
 	}
@@ -128,6 +129,8 @@ func (i *Installer) extractArchive(filePath, targetDir string) error {
 	spinner.Start()
 	defer spinner.Stop()
 
+	// filePath is validated by downloader and is within DownloadDir
+	// #nosec G304 -- path validated by downloader and restricted to DownloadDir
 	file, err := os.Open(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to open archive: %w", err)
@@ -203,28 +206,52 @@ func (i *Installer) extractTarGz(file *os.File, targetDir string) error {
 
 		switch header.Typeflag {
 		case tar.TypeDir:
-			if err := os.MkdirAll(targetPath, os.FileMode(header.Mode)); err != nil {
+			// Safe conversion: int64 → uint32 → FileMode to avoid overflow
+			// Mask to permission bits only and convert safely
+			// #nosec G115 -- masked to 0777, safe conversion through uint32
+			mode := uint32(header.Mode & 0777)
+			if err := os.MkdirAll(targetPath, os.FileMode(mode)); err != nil {
 				return fmt.Errorf("failed to create directory: %w", err)
 			}
 		case tar.TypeReg:
+			// #nosec G301 -- 0755 acceptable for archive extraction parent directories
 			if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
 				return fmt.Errorf("failed to create parent directory: %w", err)
 			}
 
+			// Check file size to prevent decompression bomb attacks
+			// Go installations are typically < 500MB, but allow up to 1GB per file for safety
+			const maxFileSize = 1 << 30 // 1GB
+			if header.Size > maxFileSize {
+				return fmt.Errorf("file %s exceeds maximum size (limit: %d bytes, got: %d bytes)", header.Name, maxFileSize, header.Size)
+			}
+
+			// targetPath is constructed from targetDir (validated) + archive path components
+			// #nosec G304 -- path components are from archive header, targetDir is validated
 			outFile, err := os.Create(targetPath)
 			if err != nil {
 				return fmt.Errorf("failed to create file: %w", err)
 			}
 
-			if _, err := io.Copy(outFile, tarReader); err != nil {
-				outFile.Close()
+			// Use LimitedReader to prevent decompression bomb attacks
+			limitedReader := io.LimitReader(tarReader, header.Size)
+			if _, err := io.Copy(outFile, limitedReader); err != nil {
+				// Ensure we handle potential close error as well
+				if cerr := outFile.Close(); cerr != nil {
+					return fmt.Errorf("failed to close file after copy error: %v (copy error: %v)", cerr, err)
+				}
 				return fmt.Errorf("failed to copy file content: %w", err)
 			}
 
-			outFile.Close()
+			if cerr := outFile.Close(); cerr != nil {
+				return fmt.Errorf("failed to close file: %w", cerr)
+			}
 
 			// Set file permissions
-			if err := os.Chmod(targetPath, os.FileMode(header.Mode)); err != nil {
+			// Safe conversion: int64 → uint32 → FileMode to avoid overflow
+			// #nosec G115 -- masked to 0777, safe conversion through uint32
+			mode := uint32(header.Mode & 0777)
+			if err := os.Chmod(targetPath, os.FileMode(mode)); err != nil {
 				return fmt.Errorf("failed to set file permissions: %w", err)
 			}
 		}
@@ -282,6 +309,7 @@ func (i *Installer) extractZip(filePath, targetDir string) error {
 		}
 
 		// Create parent directories
+		// #nosec G301 -- 0755 acceptable for archive extraction parent directories
 		if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
 			return fmt.Errorf("failed to create parent directory: %w", err)
 		}
@@ -292,15 +320,34 @@ func (i *Installer) extractZip(filePath, targetDir string) error {
 			return fmt.Errorf("failed to open file in zip: %w", err)
 		}
 
+		// Check file size to prevent decompression bomb attacks
+		// Go installations are typically < 500MB, but allow up to 1GB per file for safety
+		const maxFileSize = 1 << 30 // 1GB
+		// Safe conversion: uint64 → int64 with bounds check (maxFileSize ensures it fits in int64)
+		if file.UncompressedSize64 > maxFileSize {
+			_ = rc.Close()
+			return fmt.Errorf("file %s exceeds maximum size (%d bytes): %d", file.Name, maxFileSize, file.UncompressedSize64)
+		}
+		// #nosec G115 -- size checked above to be <= maxFileSize (1GB), safe to convert to int64
+		fileSize := int64(file.UncompressedSize64)
+
+		// targetPath is constructed from targetDir (validated) + zip path components
+		// #nosec G304 -- path components are from zip file, targetDir is validated
 		outFile, err := os.Create(targetPath)
 		if err != nil {
-			rc.Close()
+			_ = rc.Close() // Best effort cleanup
 			return fmt.Errorf("failed to create file: %w", err)
 		}
 
-		_, err = io.Copy(outFile, rc)
-		rc.Close()
-		outFile.Close()
+		// Use LimitedReader to prevent decompression bomb attacks
+		limitedReader := io.LimitReader(rc, fileSize)
+		_, err = io.Copy(outFile, limitedReader)
+		if cerr := rc.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close zip reader: %w", cerr)
+		}
+		if cerr := outFile.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close file: %w", cerr)
+		}
 
 		if err != nil {
 			return fmt.Errorf("failed to copy file content: %w", err)
@@ -352,8 +399,17 @@ func (i *Installer) createVersionMetadata(version, targetDir string) error {
 	}
 
 	// Write metadata to a file
+	// Validate targetDir to ensure metadata path is within safe bounds
+	if err := security.ValidatePath(targetDir); err != nil {
+		return fmt.Errorf("invalid target directory: %w", err)
+	}
 	metadataPath := filepath.Join(targetDir, ".gopher-metadata")
-	file, err := os.Create(metadataPath)
+	// Ensure metadata path is within targetDir to prevent traversal
+	safePath, err := security.ValidatePathWithinRoot(metadataPath, targetDir)
+	if err != nil {
+		return fmt.Errorf("invalid metadata path: %w", err)
+	}
+	file, err := os.Create(safePath) // #nosec G304 -- path validated to be within targetDir
 	if err != nil {
 		return fmt.Errorf("failed to create metadata file: %w", err)
 	}
@@ -373,8 +429,13 @@ func (i *Installer) createVersionMetadata(version, targetDir string) error {
 func (i *Installer) GetVersionMetadata(version string) (map[string]string, error) {
 	targetDir := filepath.Join(i.installDir, version)
 	metadataPath := filepath.Join(targetDir, ".gopher-metadata")
+	// Validate path is within targetDir to prevent traversal
+	safePath, err := security.ValidatePathWithinRoot(metadataPath, targetDir)
+	if err != nil {
+		return nil, fmt.Errorf("invalid metadata path: %w", err)
+	}
 
-	file, err := os.Open(metadataPath)
+	file, err := os.Open(safePath) // #nosec G304 -- path validated to be within targetDir
 	if err != nil {
 		return nil, fmt.Errorf("failed to open metadata file: %w", err)
 	}

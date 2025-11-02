@@ -182,6 +182,9 @@ gopher use system
 # Show current Go version
 gopher current
 
+# Note: After switching, Gopher automatically checks if GOPATH/bin is in PATH
+# If not, you'll see a helpful warning with fix instructions
+
 # Uninstall a Go version
 gopher uninstall 1.20.7
 

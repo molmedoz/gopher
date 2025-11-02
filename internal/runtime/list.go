@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -132,8 +133,7 @@ func (m *Manager) detectSystemVersionRobust() *Version {
 	for _, goPath := range systemGoPaths {
 		if _, err := os.Stat(goPath); err == nil {
 			// Found a system Go installation, try to get version
-			cmd := exec.Command(goPath, "version")
-			if output, err := cmd.Output(); err == nil {
+			if output, err := runGoVersionAtPath(goPath); err == nil {
 				versionStr := strings.TrimSpace(string(output))
 				// Parse version from output like "go version go1.21.0 linux/arm64"
 				parts := strings.Fields(versionStr)
@@ -163,7 +163,7 @@ func (m *Manager) detectSystemVersionRobust() *Version {
 	}
 
 	// Method 2: Try to find Go in PATH but avoid gopher-managed versions
-	if systemPath, err := exec.LookPath("go"); err == nil {
+	if systemPath, err := findGoInPath(); err == nil {
 		// Check if this is not a gopher-managed version
 		if !strings.Contains(systemPath, ".gopher") && !strings.Contains(systemPath, "gopher") {
 			// Check if it's a symlink (gopher creates symlinks)
@@ -171,8 +171,7 @@ func (m *Manager) detectSystemVersionRobust() *Version {
 				// If it's a symlink, it's likely created by gopher, skip it
 			} else {
 				// Try to get version
-				cmd := exec.Command(systemPath, "version")
-				if output, err := cmd.Output(); err == nil {
+				if output, err := runGoVersionAtPath(systemPath); err == nil {
 					versionStr := strings.TrimSpace(string(output))
 					parts := strings.Fields(versionStr)
 					if len(parts) >= 3 && parts[0] == "go" && parts[1] == "version" {
@@ -209,8 +208,7 @@ func (m *Manager) detectSystemVersionRobust() *Version {
 		}
 
 		if _, err := os.Stat(goPath); err == nil {
-			cmd := exec.Command(goPath, "version")
-			if output, err := cmd.Output(); err == nil {
+			if output, err := runGoVersionAtPath(goPath); err == nil {
 				versionStr := strings.TrimSpace(string(output))
 				parts := strings.Fields(versionStr)
 				if len(parts) >= 3 && parts[0] == "go" && parts[1] == "version" {
@@ -249,6 +247,19 @@ func (m *Manager) detectSystemVersionRobust() *Version {
 		IsSystem:    true,
 		Path:        "system",
 	}
+}
+
+// findGoInPath resolves the 'go' binary from PATH.
+func findGoInPath() (string, error) {
+	return exec.LookPath("go")
+}
+
+// runGoVersionAtPath runs '<path> version' with a short timeout and returns stdout.
+func runGoVersionAtPath(goPath string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, goPath, "version")
+	return cmd.Output()
 }
 
 // ListAvailable returns all available Go versions from official releases
