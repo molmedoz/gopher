@@ -7,22 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+*No unreleased changes yet*
+
+## [v1.0.1] - 2025-11-01
+
 ### Added
 - **Automatic PATH Validation**
   - Gopher now automatically checks if `GOPATH/bin` is in PATH after version switches
   - Provides helpful warnings with platform-specific fix instructions if missing
+  - Supports Windows, macOS (zsh/bash), and Linux with OS-appropriate commands
   - Helps users discover when installed Go tools won't be accessible from command line
   - See [USER_GUIDE.md](docs/USER_GUIDE.md#gopathbin-not-in-path-warning) for details
 
 ### Security
 - **Comprehensive Security Hardening**
-  - Fixed all HIGH severity gosec findings (G115 integer overflow)
-  - Fixed all MEDIUM severity findings (G110, G204, G304, G301, G306)
-  - Fixed all LOW severity findings (G104 unhandled errors)
-  - Added path validation for file operations
-  - Added decompression bomb protection
-  - Improved command execution security
+  - Fixed all HIGH severity gosec findings (G115 integer overflow in archive extraction)
+  - Fixed all MEDIUM severity findings:
+    - G110: Added decompression bomb protection (1GB per-file limits)
+    - G204: Secured subprocess execution with `runGoCommand` helper
+    - G304: Added path validation for file operations
+    - G301/G306: Reviewed and justified file/directory permissions
+  - Fixed all LOW severity findings (G104: Handled all unhandled errors)
+  - Added security validation helpers in `internal/security/`
   - All security fixes documented in [SECURITY.md](SECURITY.md)
+
+### Fixed
+- **Release Process Improvements**
+  - Fixed archive format configuration (zip for Windows, tar.gz for Unix)
+  - Fixed GoReleaser v2 `--skip` flags to use correct singular forms (homebrew, chocolatey, scoop)
+  - Added tag rollback safety: tags are only pushed after successful GitHub release
+  - Prevents orphaned tags if release process fails
+  - Improved release workflow reliability and error handling
+
+### Changed
+- **Release Workflow**
+  - Tags are created locally first, only pushed after successful GitHub release
+  - Automatic cleanup of tags if GitHub release fails
+  - Better error handling and rollback mechanisms
+  - Enhanced release documentation and troubleshooting guides
 
 ## [v1.0.0] - 2025-10-15
 
