@@ -60,16 +60,9 @@ builds:
       - CGO_ENABLED=0
 
 # Archive customization
+# Note: GoReleaser v2 automatically uses zip for Windows and tar.gz for Unix-like systems
 archives:
   - id: gopher
-    # Default format: tar.gz for Unix-like systems
-    format: tar.gz
-    
-    # Use zip for Windows
-    format_overrides:
-      - goos: windows
-        format: zip
-    
     name_template: >-
       {{ .ProjectName }}_
       {{- .Version }}_
@@ -488,23 +481,24 @@ winget:
     skip_upload: true
 
 # Docker images
-dockers:
-  - image_templates:
-      - "ghcr.io/molmedoz/{{ .ProjectName }}:{{ .Version }}"
-      - "ghcr.io/molmedoz/{{ .ProjectName }}:latest"
-    
-    dockerfile: Dockerfile.release
-    
-    build_flag_templates:
-      - "--pull"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--label=org.opencontainers.image.source=https://github.com/molmedoz/gopher"
-    
-    # Skip for now - needs Dockerfile.release
-    skip_push: true
+# NOTE: dockers is deprecated in favor of dockers_v2, but we're not using Docker yet
+# Uncomment and migrate to dockers_v2 when ready to enable Docker releases
+# dockers:
+#   - image_templates:
+#       - "ghcr.io/molmedoz/{{ .ProjectName }}:{{ .Version }}"
+#       - "ghcr.io/molmedoz/{{ .ProjectName }}:latest"
+#     
+#     dockerfile: Dockerfile.release
+#     
+#     build_flag_templates:
+#       - "--pull"
+#       - "--label=org.opencontainers.image.created={{.Date}}"
+#       - "--label=org.opencontainers.image.title={{.ProjectName}}"
+#       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+#       - "--label=org.opencontainers.image.version={{.Version}}"
+#       - "--label=org.opencontainers.image.source=https://github.com/molmedoz/gopher"
+#     
+#     skip_push: true
 
 # Announce (optional)
 # announces:
