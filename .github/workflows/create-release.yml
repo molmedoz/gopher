@@ -204,7 +204,7 @@ jobs:
       - name: Prepare arguments
         id: args
         run: |
-          args="release --clean --skip=brews,chocolateys,scoops"
+          args="release --clean --skip=homebrew,chocolatey,scoop"
           [ "${{ github.event.inputs.draft }}" = "true" ] && args="$args --draft"
           [ "${{ github.event.inputs.prerelease }}" = "true" ] && args="$args --prerelease"
           echo "args=$args" >> $GITHUB_OUTPUT
@@ -246,7 +246,7 @@ jobs:
         with:
           distribution: goreleaser
           version: '~> v2'
-          args: release --skip=validate,archives,source,chocolateys,nfpms,scoops
+          args: release --skip=validate,archive,chocolatey,nfpm,scoop
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
@@ -285,7 +285,7 @@ jobs:
         with:
           distribution: goreleaser
           version: '~> v2'
-          args: release --skip=validate,archives,source,brews,nfpms,scoops
+          args: release --skip=validate,archive,homebrew,nfpm,scoop
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
@@ -324,7 +324,7 @@ jobs:
         with:
           distribution: goreleaser
           version: '~> v2'
-          args: release --skip=validate,archives,source,brews,chocolateys,nfpms
+          args: release --skip=validate,archive,homebrew,chocolatey,nfpm
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
