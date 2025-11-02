@@ -60,9 +60,22 @@ builds:
       - CGO_ENABLED=0
 
 # Archive customization
-# Note: GoReleaser v2 automatically uses zip for Windows and tar.gz for Unix-like systems
+# Note: format/format_overrides are deprecated but still required for proper archive creation
+# GoReleaser v2 auto-detection may not work in all cases
 archives:
   - id: gopher
+    # Link this archive to the gopher build
+    builds:
+      - gopher
+    
+    # Explicit format configuration (deprecated but still needed)
+    format: tar.gz
+    
+    # Use zip for Windows
+    format_overrides:
+      - goos: windows
+        format: zip
+    
     name_template: >-
       {{ .ProjectName }}_
       {{- .Version }}_
