@@ -62,6 +62,14 @@ builds:
 # Archive customization
 archives:
   - id: gopher
+    # Default format: tar.gz for Unix-like systems
+    format: tar.gz
+    
+    # Use zip for Windows
+    format_overrides:
+      - goos: windows
+        format: zip
+    
     name_template: >-
       {{ .ProjectName }}_
       {{- .Version }}_
