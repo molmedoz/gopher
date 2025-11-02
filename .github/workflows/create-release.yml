@@ -125,23 +125,28 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Create tag locally
+      - name: Create and push tag
         id: tag
         run: |
           TAG="${{ needs.validate.outputs.tag }}"
-          echo "🏷️  Creating tag locally: $TAG"
+          echo "🏷️  Creating tag: $TAG"
           git tag -a "$TAG" -m "Release $TAG"
-          echo "✅ Tag $TAG created locally (not pushed yet)"
+          echo "✅ Tag $TAG created locally"
+          
+          echo "📤 Pushing tag to remote (required for GoReleaser)..."
+          git push origin "$TAG"
+          echo "✅ Tag $TAG pushed to repository"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
       - name: Tag created summary
         run: |
-          echo "## 🏷️  Tag Created (Local)" >> $GITHUB_STEP_SUMMARY
+          echo "## 🏷️  Tag Created and Pushed" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Tag \`${{ needs.validate.outputs.tag }}\` has been created locally." >> $GITHUB_STEP_SUMMARY
-          echo "It will be pushed only after GitHub release succeeds." >> $GITHUB_STEP_SUMMARY
+          echo "Tag \`${{ needs.validate.outputs.tag }}\` has been created and pushed." >> $GITHUB_STEP_SUMMARY
+          echo "⚠️  If GitHub release fails, the tag will be automatically removed." >> $GITHUB_STEP_SUMMARY
 
   # Validate GoReleaser config before releasing
+  # Note: This runs after tag is pushed because GoReleaser needs the tag to exist
   validate-config:
     name: Validate Release Config
     runs-on: ubuntu-latest
@@ -219,27 +224,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push tag (only after successful release)
-        if: success()
-        run: |
-          TAG="${{ needs.validate.outputs.tag }}"
-          echo "🏷️  GitHub release succeeded, pushing tag: $TAG"
-          
-          # Configure git
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # Create and push tag
-          git tag -a "$TAG" -m "Release $TAG"
-          git push origin "$TAG"
-          echo "✅ Tag $TAG pushed to repository"
-
       - name: Summary
         if: success()
         run: |
           echo "✅ **GitHub Release**: Published binaries and archives" >> $GITHUB_STEP_SUMMARY
           echo "📦 View: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
-          echo "🏷️  Tag pushed to repository" >> $GITHUB_STEP_SUMMARY
+          echo "🏷️  Tag already pushed (required for GoReleaser)" >> $GITHUB_STEP_SUMMARY
 
       - name: Cleanup on failure (delete tag)
         if: failure()
@@ -251,21 +241,16 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Fetch all tags to see remote state
-          git fetch --tags
-          
           # Delete local tag if it exists
           if git rev-parse "$TAG" >/dev/null 2>&1; then
             git tag -d "$TAG"
             echo "✅ Local tag $TAG deleted"
           fi
           
-          # Try to delete remote tag if it was somehow pushed
+          # Delete remote tag (it was pushed earlier for GoReleaser)
           if git ls-remote --tags origin "$TAG" | grep -q "$TAG"; then
-            echo "⚠️  Warning: Tag $TAG exists on remote - attempting to delete"
-            git push origin --delete "$TAG" || echo "Could not delete remote tag"
-          else
-            echo "ℹ️  Tag was not pushed to remote (expected - tag push happens after release)"
+            echo "⚠️  Deleting remote tag $TAG due to release failure"
+            git push origin --delete "$TAG" || echo "Could not delete remote tag (may have been deleted already)"
           fi
           
           echo "🧹 Cleanup complete - tag removed due to release failure"
