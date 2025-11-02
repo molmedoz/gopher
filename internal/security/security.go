@@ -1,6 +1,7 @@
 package security
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -147,6 +148,81 @@ func GetSafePath(path string) (string, error) {
 	return filepath.Clean(path), nil
 }
 
+// ValidatePathWithinRoot ensures a path is within a safe root directory
+// This prevents directory traversal attacks when accessing files
+func ValidatePathWithinRoot(path, rootDir string) (string, error) {
+	if err := ValidatePath(path); err != nil {
+		return "", err
+	}
+
+	// Resolve absolute paths
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve absolute path: %w", err)
+	}
+
+	absRoot, err := filepath.Abs(rootDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve root directory: %w", err)
+	}
+
+	// Normalize paths to handle different separators
+	absPath = filepath.Clean(absPath)
+	absRoot = filepath.Clean(absRoot)
+
+	// Ensure the path is within the root directory
+	relPath, err := filepath.Rel(absRoot, absPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to compute relative path: %w", err)
+	}
+
+	// Check for path traversal (contains "..")
+	if strings.HasPrefix(relPath, "..") || strings.Contains(relPath, ".."+string(filepath.Separator)) {
+		return "", NewPathTraversalError(path)
+	}
+
+	return absPath, nil
+}
+
+// SafeReadFile reads a file after validating the path is within rootDir
+func SafeReadFile(path, rootDir string) ([]byte, error) {
+	safePath, err := ValidatePathWithinRoot(path, rootDir)
+	if err != nil {
+		return nil, err
+	}
+	// #nosec G304 -- path validated and constrained to rootDir by ValidatePathWithinRoot
+	return os.ReadFile(safePath)
+}
+
+// SafeWriteFile writes to a file after validating the path is within rootDir
+func SafeWriteFile(path, rootDir string, data []byte, perm os.FileMode) error {
+	safePath, err := ValidatePathWithinRoot(path, rootDir)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(safePath, data, perm)
+}
+
+// SafeOpen opens a file after validating the path is within rootDir
+func SafeOpen(path, rootDir string) (*os.File, error) {
+	safePath, err := ValidatePathWithinRoot(path, rootDir)
+	if err != nil {
+		return nil, err
+	}
+	// #nosec G304 -- path validated and constrained to rootDir by ValidatePathWithinRoot
+	return os.Open(safePath)
+}
+
+// SafeCreate creates a file after validating the path is within rootDir
+func SafeCreate(path, rootDir string) (*os.File, error) {
+	safePath, err := ValidatePathWithinRoot(path, rootDir)
+	if err != nil {
+		return nil, err
+	}
+	// #nosec G304 -- path validated and constrained to rootDir by ValidatePathWithinRoot
+	return os.Create(safePath)
+}
+
 // ValidateFilePermissions validates file permissions for security
 func ValidateFilePermissions(filePath string, expectedMode os.FileMode) error {
 	info, err := os.Stat(filePath)
@@ -192,6 +268,7 @@ func CreateSecureFile(filePath string, mode os.FileMode) (*os.File, error) {
 	}
 
 	// Create the file with secure permissions
+	// #nosec G304 -- filePath validated by ValidatePath before calling this function
 	file, err := os.Create(filePath)
 	if err != nil {
 		return nil, err
@@ -199,8 +276,11 @@ func CreateSecureFile(filePath string, mode os.FileMode) (*os.File, error) {
 
 	// Set secure permissions
 	if err := SetSecureFilePermissions(filePath, mode); err != nil {
-		file.Close()
-		os.Remove(filePath)
+		_ = file.Close() // Best effort cleanup
+		if rerr := os.Remove(filePath); rerr != nil && !os.IsNotExist(rerr) {
+			// Log cleanup failure but return original error
+			return nil, fmt.Errorf("failed to set permissions: %w (cleanup also failed: %v)", err, rerr)
+		}
 		return nil, err
 	}
 

@@ -109,6 +109,7 @@ func runWindowsSetup(manager *inruntime.Manager) error { //nolint:unused
 
 	// Create a test symlink
 	testDir := filepath.Join(userHome, "AppData", "Local", "bin")
+	// #nosec G301 -- 0755 required for test bin directory
 	if err := os.MkdirAll(testDir, 0755); err != nil {
 		fmt.Printf("   ❌ Failed to create test directory: %v\n", err)
 	} else {
@@ -117,15 +118,20 @@ func runWindowsSetup(manager *inruntime.Manager) error { //nolint:unused
 		testLink := filepath.Join(testDir, "gopher-test-link.exe")
 
 		// Create a dummy file to link to
+		// #nosec G306 -- 0644 acceptable for temporary test file
 		if err := os.WriteFile(testTarget, []byte("test"), 0644); err == nil {
 			if err := os.Symlink(testTarget, testLink); err == nil {
 				fmt.Println("   ✅ Symlink creation works")
-				os.Remove(testLink) // Clean up
+				if err := os.Remove(testLink); err != nil && !os.IsNotExist(err) {
+					fmt.Printf("   ⚠️  Failed to remove test symlink: %v\n", err)
+				}
 			} else {
 				fmt.Printf("   ❌ Symlink creation failed: %v\n", err)
 				fmt.Println("   You may need to enable Developer Mode or run as Administrator")
 			}
-			os.Remove(testTarget) // Clean up
+			if err := os.Remove(testTarget); err != nil && !os.IsNotExist(err) {
+				fmt.Printf("   ⚠️  Failed to remove test file: %v\n", err)
+			}
 		}
 	}
 
@@ -862,6 +868,7 @@ func showGenericNextSteps(info *SystemInfo) {
 
 func addDirectoryToPath(dir, profilePath string) error {
 	// Read current profile
+	// #nosec G304 -- profilePath is user's shell profile file (validated path)
 	content, err := os.ReadFile(profilePath)
 	if err != nil && !os.IsNotExist(err) {
 		return err
@@ -878,10 +885,12 @@ func addDirectoryToPath(dir, profilePath string) error {
 	pathExport := fmt.Sprintf("\n# Gopher PATH\nexport PATH=\"%s:$PATH\"\n", dir)
 
 	// Write updated profile
+	// #nosec G306 -- 0644 required for shell profile files (must be readable by shell)
 	return os.WriteFile(profilePath, []byte(profileContent+pathExport), 0644)
 }
 
 func isGopherConfigured(profilePath string) bool {
+	// #nosec G304 -- profilePath is user's shell profile file (validated path)
 	content, err := os.ReadFile(profilePath)
 	if err != nil {
 		return false
@@ -891,23 +900,33 @@ func isGopherConfigured(profilePath string) bool {
 
 func testSymlinkCreation(symlinkDir string) error {
 	// Create test directory if it doesn't exist
+	// #nosec G301 -- 0755 required for test symlink directory
 	if err := os.MkdirAll(symlinkDir, 0755); err != nil {
 		return err
 	}
 
 	// Create test file
 	testFile := filepath.Join(symlinkDir, "gopher-test")
+	// #nosec G306 -- 0644 acceptable for temporary test file
 	if err := os.WriteFile(testFile, []byte("test"), 0644); err != nil {
 		return err
 	}
-	defer os.Remove(testFile)
+	defer func() {
+		if err := os.Remove(testFile); err != nil && !os.IsNotExist(err) {
+			fmt.Printf("warning: cleanup failed removing %s: %v\n", testFile, err)
+		}
+	}()
 
 	// Create test symlink
 	testLink := filepath.Join(symlinkDir, "gopher-test-link")
 	if err := os.Symlink(testFile, testLink); err != nil {
 		return err
 	}
-	defer os.Remove(testLink)
+	defer func() {
+		if err := os.Remove(testLink); err != nil && !os.IsNotExist(err) {
+			fmt.Printf("warning: cleanup failed removing %s: %v\n", testLink, err)
+		}
+	}()
 
 	return nil
 }

@@ -181,6 +181,45 @@ gopher env reset
 
 **A:** Yes! Gopher automatically sets `GOROOT` to point to the active Go version's installation directory.
 
+### Q: Why do I see a warning about GOPATH/bin not being in PATH?
+
+**A:** After switching versions, Gopher automatically checks if `$GOPATH/bin` is in your PATH. This directory contains tools installed via `go install`. 
+
+**What it means:**
+- Go compilation and development still works perfectly
+- Only affects command-line access to installed tools (e.g., `golangci-lint`, `gofumpt`, etc.)
+- Gopher provides platform-specific fix instructions when this warning appears
+
+**To fix:**
+```bash
+# Unix/Linux/macOS - Add to shell profile:
+echo 'export PATH="$GOPATH/bin:$PATH"' >> ~/.bashrc  # or ~/.zshrc
+source ~/.bashrc
+
+# Windows PowerShell:
+[Environment]::SetEnvironmentVariable("PATH", "$env:GOPATH\bin;" + [Environment]::GetEnvironmentVariable("PATH", "User"), "User")
+```
+
+The warning appears automatically after version switches if GOPATH/bin is missing from PATH.
+
+### Q: My installed Go tools don't work after switching versions - what's wrong?
+
+**A:** This usually means `$GOPATH/bin` is not in your PATH. Gopher detects and warns about this automatically after version switches.
+
+**Quick check:**
+```bash
+# Check if GOPATH/bin is in PATH
+echo $PATH | grep $(echo $GOPATH/bin)
+
+# If empty, add it (see warning instructions from Gopher)
+export PATH="$GOPATH/bin:$PATH"
+```
+
+**Why this happens:**
+- Each Go version may have a different GOPATH location (especially in version-specific mode)
+- When switching versions, the new GOPATH/bin might not be in PATH yet
+- Gopher checks for this and provides fix instructions
+
 ---
 
 ## Troubleshooting

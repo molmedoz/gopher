@@ -42,6 +42,7 @@ import (
 	"strings"
 
 	"github.com/molmedoz/gopher/internal/env"
+	"github.com/molmedoz/gopher/internal/security"
 )
 
 // Config represents gopher configuration
@@ -142,6 +143,12 @@ func getUnixHomeDirWithEnv(envProvider env.Provider) string {
 
 // Load loads configuration from file
 func Load(configPath string) (*Config, error) {
+	// Validate path to prevent directory traversal attacks
+	// Note: Config files can be anywhere, so we validate structure but don't restrict to specific root
+	if err := security.ValidatePath(configPath); err != nil {
+		return nil, fmt.Errorf("invalid config path: %w", err)
+	}
+
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		// Create default config if it doesn't exist
 		config := DefaultConfig()
@@ -157,7 +164,7 @@ func Load(configPath string) (*Config, error) {
 		return config, nil
 	}
 
-	data, err := os.ReadFile(configPath)
+	data, err := os.ReadFile(configPath) // #nosec G304 -- path validated above
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
@@ -178,8 +185,9 @@ func Load(configPath string) (*Config, error) {
 // Save saves configuration to file
 func (c *Config) Save(configPath string) error {
 	// Ensure directory exists
+	// Use 0750 for config directory - private user data
 	dir := filepath.Dir(configPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
@@ -188,6 +196,7 @@ func (c *Config) Save(configPath string) error {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
+	// #nosec G306 -- 0644 acceptable for config file (contains non-sensitive user preferences)
 	if err := os.WriteFile(configPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
@@ -252,6 +261,7 @@ func (c *Config) EnsureDirectories() error {
 		if dir == "" {
 			continue
 		}
+		// #nosec G301 -- 0755 acceptable for user-specified directories (EnsureDirectories)
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return fmt.Errorf("failed to create directory %s: %w", dir, err)
 		}

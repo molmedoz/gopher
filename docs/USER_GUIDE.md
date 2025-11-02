@@ -416,6 +416,11 @@ gopher use system
 1. Validates version exists
 2. Creates symlink to version's go binary
 3. Updates PATH (requires appropriate permissions)
+4. Sets up environment variables (GOROOT, GOPATH, etc.)
+5. **Checks if GOPATH/bin is in PATH** - warns with fix instructions if missing
+
+**Automatic PATH Check:**
+After switching, Gopher automatically verifies that `$GOPATH/bin` is in your PATH. If not, you'll see a warning with platform-specific fix instructions. This ensures that tools installed via `go install` are accessible from the command line.
 
 ### `gopher current`
 
@@ -918,6 +923,35 @@ echo $GOPATH  # /path/to/my-project
 
 ### Troubleshooting Environment Issues
 
+#### GOPATH/bin Not in PATH Warning
+
+**Problem**: After switching versions, you see a warning that GOPATH/bin is not in your PATH
+
+**What this means**: 
+- Gopher detected that `$GOPATH/bin` is not in your PATH environment variable
+- Installed Go packages/tools (installed via `go install`) will not be accessible from command line
+- This is a **warning**, not an error - Go compilation and development still works
+- Only affects command-line access to installed tools
+
+**Solution**:
+```bash
+# Gopher automatically shows the fix when this warning appears
+# For Unix/Linux/macOS:
+export PATH="$GOPATH/bin:$PATH"
+
+# Or add permanently to your shell profile (~/.bashrc, ~/.zshrc):
+echo 'export PATH="$GOPATH/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+# For Windows (PowerShell):
+$env:PATH = "$env:GOPATH\bin;$env:PATH"
+
+# Or permanently via PowerShell:
+[Environment]::SetEnvironmentVariable("PATH", "$env:GOPATH\bin;" + [Environment]::GetEnvironmentVariable("PATH", "User"), "User")
+```
+
+**Note**: Gopher automatically checks for this issue after every version switch and provides platform-specific instructions.
+
 #### Environment Not Activated
 
 **Problem**: Go commands not found after switching versions
@@ -1363,6 +1397,19 @@ START: What's the problem?
 │  └─ Reset environment
 │     └─ gopher env reset
 │        └─ gopher use <version>
+│
+├─ [Installed Go tools/packages not working]
+│  │
+│  ├─ Check if GOPATH/bin is in PATH: echo $PATH | grep $GOPATH/bin
+│  │  └─ Not found?
+│  │     └─ Add to PATH (Gopher shows warning with instructions)
+│  │        ├─ Unix: export PATH="$GOPATH/bin:$PATH"
+│  │        └─ Windows: set PATH=%GOPATH%\bin;%PATH%
+│  │
+│  └─ Check GOPATH: echo $GOPATH
+│     └─ Should match current version's GOPATH
+│        └─ gopher env show <version>
+│           └─ Verify PATH includes GOPATH/bin
 │
 ├─ [Slow downloads]
 │  │

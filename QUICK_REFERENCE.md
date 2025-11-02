@@ -36,6 +36,7 @@ go version  # Verify
 ```bash
 gopher use system
 go version  # Verify
+# Note: Gopher checks if GOPATH/bin is in PATH and warns if missing
 ```
 
 ### Check Current Setup
@@ -168,6 +169,7 @@ gopher --json current
 | Problem | Solution |
 |---------|----------|
 | Command not found | Check PATH: `echo $PATH \| grep gopher` |
+| GOPATH/bin warning | Add to PATH: `export PATH="$GOPATH/bin:$PATH"` |
 | Version not switching | Reload shell: `source ~/.bashrc` or `source ~/.zshrc` |
 | Permission denied (Linux/macOS) | Fix permissions: `chmod -R u+w ~/.gopher` |
 | Slow downloads | Try different mirror: `gopher env set mirror_url=<url>` |

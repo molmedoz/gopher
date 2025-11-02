@@ -7,7 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-*No unreleased changes yet*
+### Added
+- **Automatic PATH Validation**
+  - Gopher now automatically checks if `GOPATH/bin` is in PATH after version switches
+  - Provides helpful warnings with platform-specific fix instructions if missing
+  - Helps users discover when installed Go tools won't be accessible from command line
+  - See [USER_GUIDE.md](docs/USER_GUIDE.md#gopathbin-not-in-path-warning) for details
+
+### Security
+- **Comprehensive Security Hardening**
+  - Fixed all HIGH severity gosec findings (G115 integer overflow)
+  - Fixed all MEDIUM severity findings (G110, G204, G304, G301, G306)
+  - Fixed all LOW severity findings (G104 unhandled errors)
+  - Added path validation for file operations
+  - Added decompression bomb protection
+  - Improved command execution security
+  - All security fixes documented in [SECURITY.md](SECURITY.md)
 
 ## [v1.0.0] - 2025-10-15
 

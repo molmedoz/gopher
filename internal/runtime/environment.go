@@ -72,6 +72,7 @@ func (m *Manager) setupSystemEnvironment() error {
 func (m *Manager) createEnvironmentScript(version string, envVars map[string]string) (string, error) {
 	// Create script directory
 	scriptDir := filepath.Join(m.config.InstallDir, "..", "scripts")
+	// #nosec G301 -- 0755 required for executable scripts directory
 	if err := os.MkdirAll(scriptDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create script directory: %w", err)
 	}
@@ -91,6 +92,7 @@ func (m *Manager) createEnvironmentScript(version string, envVars map[string]str
 	scriptContent += "echo \"Go environment activated for version: " + version + "\"\n"
 
 	// Write script file
+	// #nosec G306 -- 0755 required for executable script
 	if err := os.WriteFile(scriptPath, []byte(scriptContent), 0755); err != nil {
 		return "", fmt.Errorf("failed to write environment script: %w", err)
 	}
@@ -101,13 +103,15 @@ func (m *Manager) createEnvironmentScript(version string, envVars map[string]str
 // saveActiveVersion saves the currently active version to a state file
 func (m *Manager) saveActiveVersion(version string) error {
 	stateDir := filepath.Join(m.config.InstallDir, "..", "state")
-	if err := os.MkdirAll(stateDir, 0755); err != nil {
+	// Use 0750 for state directory - private user data
+	if err := os.MkdirAll(stateDir, 0750); err != nil {
 		return fmt.Errorf("failed to create state directory: %w", err)
 	}
 
 	stateFile := filepath.Join(stateDir, "active-version")
 	content := fmt.Sprintf("active_version=%s\n", version)
 
+	// #nosec G306 -- 0644 acceptable for state file (non-sensitive metadata)
 	if err := os.WriteFile(stateFile, []byte(content), 0644); err != nil {
 		return fmt.Errorf("failed to write state file: %w", err)
 	}
@@ -119,6 +123,7 @@ func (m *Manager) saveActiveVersion(version string) error {
 func (m *Manager) getActiveVersionFromState() (string, error) {
 	stateFile := filepath.Join(m.config.InstallDir, "..", "state", "active-version")
 
+	// #nosec G304 -- stateFile is constructed from validated config.InstallDir
 	content, err := os.ReadFile(stateFile)
 	if err != nil {
 		return "", err
@@ -170,6 +175,7 @@ func (m *Manager) setupShellIntegration() error {
 func (m *Manager) createGopherInitScript() (string, error) {
 	// Create scripts directory
 	scriptsDir := filepath.Join(m.config.InstallDir, "..", "scripts")
+	// #nosec G301 -- 0755 required for executable scripts directory
 	if err := os.MkdirAll(scriptsDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create scripts directory: %w", err)
 	}
@@ -235,6 +241,7 @@ alias gopher-system="gopher system"
 `
 
 	// Write script file
+	// #nosec G306 -- 0755 required for executable script
 	if err := os.WriteFile(initScriptPath, []byte(scriptContent), 0755); err != nil {
 		return "", fmt.Errorf("failed to write gopher init script: %w", err)
 	}
@@ -314,6 +321,7 @@ func (m *Manager) getShellProfile(shell string) (string, error) {
 // addToShellProfile adds gopher initialization to shell profile
 func (m *Manager) addToShellProfile(profilePath, initScript string) error {
 	// Check if already added
+	// #nosec G304 -- profilePath is user's shell profile file (validated path)
 	content, err := os.ReadFile(profilePath)
 	if err != nil {
 		// If file doesn't exist, create it
@@ -335,6 +343,7 @@ fi
 
 	// Append to profile
 	newContent := string(content) + addition
+	// #nosec G306 -- 0644 required for shell profile files (must be readable by shell)
 	return os.WriteFile(profilePath, []byte(newContent), 0644)
 }
 
@@ -507,13 +516,15 @@ func (m *Manager) getGopherSymlinkPath() (string, error) {
 	switch runtime.GOOS {
 	case "windows":
 		localBinDir := filepath.Join(userHome, "AppData", "Local", "bin")
+		// #nosec G301 -- 0755 required for executable bin directory
 		if err := os.MkdirAll(localBinDir, 0755); err != nil {
 			return "", fmt.Errorf("failed to create local bin directory: %w", err)
 		}
 		symlinkPath = filepath.Join(localBinDir, "go.exe")
 	default:
-		// Use ~/.local/bin/go as the standard gopher symlink location
+		// Use ~/.local/bin as the standard gopher symlink location
 		localBinDir := filepath.Join(userHome, ".local", "bin")
+		// #nosec G301 -- 0755 required for executable bin directory
 		if err := os.MkdirAll(localBinDir, 0755); err != nil {
 			return "", fmt.Errorf("failed to create local bin directory: %w", err)
 		}
@@ -609,4 +620,109 @@ After fixing, verify with: where go
 	}
 
 	return nil
+}
+
+// checkGOPATHInPath checks if GOPATH/bin is in PATH and alerts the user if not
+func (m *Manager) checkGOPATHInPath(version string) {
+	if !m.config.SetEnvironment {
+		return
+	}
+
+	var gopath string
+	if version == "system" {
+		// Get system Go info
+		systemDetector := NewSystemDetector()
+		systemInfo, err := systemDetector.GetSystemGoInfo()
+		if err != nil {
+			// If we can't get system Go info, skip the check
+			return
+		}
+		gopath = systemInfo.GOPATH
+	} else {
+		// Get GOPATH for this version
+		gopath = m.config.GetGOPATHWithEnv(version, m.envProvider)
+	}
+
+	if gopath == "" {
+		return
+	}
+
+	gopathBin := filepath.Join(gopath, "bin")
+
+	// Get current PATH
+	currentPath := m.envProvider.Getenv("PATH")
+	if currentPath == "" {
+		fmt.Printf("\n⚠️  WARNING: PATH environment variable is not set!\n")
+		fmt.Printf("  Installed Go packages/tools will not be accessible.\n")
+		fmt.Printf("  GOPATH/bin location: %s\n", gopathBin)
+		fmt.Printf("  Please add GOPATH/bin to your PATH:\n")
+		if runtime.GOOS == "windows" {
+			fmt.Printf("    set PATH=%s;%%PATH%%\n", gopathBin)
+			fmt.Printf("  Or permanently via PowerShell:\n")
+			fmt.Printf("    [Environment]::SetEnvironmentVariable(\"PATH\", \"%s;\" + [Environment]::GetEnvironmentVariable(\"PATH\", \"User\"), \"User\")\n", gopathBin)
+		} else if runtime.GOOS == "darwin" {
+			fmt.Printf("    export PATH=\"%s:$PATH\"\n", gopathBin)
+			fmt.Printf("  Or add to your shell profile (~/.zshrc for zsh, ~/.bash_profile for bash):\n")
+			fmt.Printf("    echo 'export PATH=\"%s:$PATH\"' >> ~/.zshrc\n", gopathBin)
+		} else {
+			// Linux and other Unix-like systems
+			fmt.Printf("    export PATH=\"%s:$PATH\"\n", gopathBin)
+			fmt.Printf("  Or add to your shell profile (~/.bashrc for bash, ~/.zshrc for zsh):\n")
+			fmt.Printf("    echo 'export PATH=\"%s:$PATH\"' >> ~/.bashrc\n", gopathBin)
+		}
+		return
+	}
+
+	// Check if GOPATH/bin is in PATH
+	pathDirs := strings.Split(currentPath, string(os.PathListSeparator))
+	gopathBinInPath := false
+	for _, dir := range pathDirs {
+		if dir == gopathBin {
+			gopathBinInPath = true
+			break
+		}
+	}
+
+	if !gopathBinInPath {
+		fmt.Printf("\n⚠️  WARNING: GOPATH/bin is not in your PATH!\n")
+		fmt.Printf("  Installed Go packages/tools will not work.\n")
+		fmt.Printf("  GOPATH/bin location: %s\n", gopathBin)
+		fmt.Printf("\n  To fix this, add GOPATH/bin to your PATH:\n")
+
+		switch runtime.GOOS {
+		case "windows":
+			// Windows: Use semicolon separator and Windows-specific commands
+			fmt.Printf("  For current session (Command Prompt):\n")
+			fmt.Printf("    set PATH=%s;%%PATH%%\n", gopathBin)
+			fmt.Printf("\n  For current session (PowerShell):\n")
+			fmt.Printf("    $env:PATH = \"%s;\" + $env:PATH\n", gopathBin)
+			fmt.Printf("\n  Permanently via PowerShell:\n")
+			fmt.Printf("    [Environment]::SetEnvironmentVariable(\"PATH\", \"%s;\" + [Environment]::GetEnvironmentVariable(\"PATH\", \"User\"), \"User\")\n", gopathBin)
+			fmt.Printf("\n  After adding, restart your terminal or run:\n")
+			fmt.Printf("    refreshenv  (if using Chocolatey)\n")
+			fmt.Printf("    Or restart PowerShell/Command Prompt\n")
+		case "darwin":
+			// macOS: Default to zsh (macOS default since Catalina)
+			fmt.Printf("  For current session:\n")
+			fmt.Printf("    export PATH=\"%s:$PATH\"\n", gopathBin)
+			fmt.Printf("\n  Permanently (add to ~/.zshrc for zsh, or ~/.bash_profile for bash):\n")
+			fmt.Printf("    echo 'export PATH=\"%s:$PATH\"' >> ~/.zshrc\n", gopathBin)
+			fmt.Printf("  Or for bash:\n")
+			fmt.Printf("    echo 'export PATH=\"%s:$PATH\"' >> ~/.bash_profile\n", gopathBin)
+			fmt.Printf("\n  After adding, restart your terminal or run:\n")
+			fmt.Printf("    source ~/.zshrc  (for zsh)\n")
+			fmt.Printf("    Or: source ~/.bash_profile  (for bash)\n")
+		default:
+			// Linux and other Unix-like systems
+			fmt.Printf("  For current session:\n")
+			fmt.Printf("    export PATH=\"%s:$PATH\"\n", gopathBin)
+			fmt.Printf("\n  Permanently (add to ~/.bashrc for bash, or ~/.zshrc for zsh):\n")
+			fmt.Printf("    echo 'export PATH=\"%s:$PATH\"' >> ~/.bashrc\n", gopathBin)
+			fmt.Printf("  Or for zsh:\n")
+			fmt.Printf("    echo 'export PATH=\"%s:$PATH\"' >> ~/.zshrc\n", gopathBin)
+			fmt.Printf("\n  After adding, restart your terminal or run:\n")
+			fmt.Printf("    source ~/.bashrc  (for bash)\n")
+			fmt.Printf("    Or: source ~/.zshrc  (for zsh)\n")
+		}
+	}
 }

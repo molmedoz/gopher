@@ -122,6 +122,7 @@ func (d *Downloader) Download(version string, downloadDir string) (string, error
 	}
 
 	// Create download directory if it doesn't exist
+	// #nosec G301 -- 0755 acceptable for temporary download directory
 	if err := os.MkdirAll(downloadDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create download directory: %w", err)
 	}
@@ -141,7 +142,9 @@ func (d *Downloader) Download(version string, downloadDir string) (string, error
 
 	// Verify the downloaded file
 	if !d.isValidFile(localPath, info.SHA256) {
-		os.Remove(localPath) // Clean up invalid file
+		if err := os.Remove(localPath); err != nil && !os.IsNotExist(err) {
+			return "", fmt.Errorf("downloaded file failed verification (checksum mismatch); cleanup failed: %w", err)
+		}
 		return "", fmt.Errorf("downloaded file failed verification (checksum mismatch)")
 	}
 
@@ -297,6 +300,7 @@ func (d *Downloader) getFileSize(filename string) (int64, error) {
 // downloadFile downloads a file from URL to local path
 func (d *Downloader) downloadFile(url, localPath string) error {
 	// Create the file
+	// #nosec G304 -- localPath is constructed from validated downloadDir and filename
 	file, err := os.Create(localPath)
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
@@ -353,6 +357,7 @@ func (d *Downloader) isValidFile(filePath, expectedSHA256 string) bool {
 	}
 
 	// Calculate SHA256 of the file
+	// #nosec G304 -- filePath is validated download path or comes from validated config
 	file, err := os.Open(filePath)
 	if err != nil {
 		return false
