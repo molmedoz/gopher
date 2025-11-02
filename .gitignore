@@ -54,6 +54,11 @@ test-*
 coverage.out
 coverage.html
 
+# Security scan reports
+gosec-*.json
+gosec-report*.json
+*.gosec.json
+
 # Accidentally generated shell scripts (should not be committed)
 internal/runtime/bash
 internal/runtime/*.sh
