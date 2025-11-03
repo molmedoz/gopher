@@ -231,6 +231,10 @@ brews:
     # License
     license: "MIT"
     
+    # URL template for downloading binaries from GitHub Releases
+    # Required when --skip=archive is used (archives already exist in GitHub Release)
+    url_template: "https://github.com/molmedoz/gopher/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    
     # Tap repo exists - enable publishing
     skip_upload: false
     
