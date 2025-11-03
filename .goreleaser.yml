@@ -62,13 +62,10 @@ builds:
 # Archive customization
 # Note: format/format_overrides are deprecated but still required for proper archive creation
 # GoReleaser v2 auto-detection may not work in all cases
+# TODO: Remove format/format_overrides when GoReleaser provides alternative
 archives:
   - id: gopher
-    # Link this archive to the gopher build
-    builds:
-      - gopher
-    
-    # Explicit format configuration (deprecated but still needed)
+    # Explicit format configuration (deprecated but still needed for Windows zip archives)
     format: tar.gz
     
     # Use zip for Windows

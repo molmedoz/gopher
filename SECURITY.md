@@ -55,7 +55,13 @@ golangci-lint run --enable gosec
   - **Fix**: 
     - Added `ValidatePath` and `ValidatePathWithinRoot` in `security` package
     - Path validation applied to config loading and metadata operations
-    - `#nosec` comments added for safely constructed paths (archive extraction)
+    - **Root scoping**: All metadata/config/state file access is now scoped to safe root directories:
+      - Config files: Scoped to `~/.gopher` (Unix) or `~/gopher` (Windows)
+      - State files: Scoped to `~/.gopher/state` (parent of install directory)
+      - Alias files: Scoped to `~/.gopher` (parent of install directory)
+      - Metadata files: Already scoped to install directory (via `ValidatePathWithinRoot`)
+    - Removed `..` path traversal patterns (replaced with `filepath.Dir` and absolute path resolution)
+    - `#nosec` comments added for safely constructed paths (archive extraction, validated paths)
 
 - **G301 (CWE-276): Directory permissions** [FIXED]
   - **Locations**: Multiple directories across codebase

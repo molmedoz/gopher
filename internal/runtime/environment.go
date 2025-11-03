@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/molmedoz/gopher/internal/security"
 )
 
 // setupEnvironment sets up environment variables for a specific Go version
@@ -102,17 +104,49 @@ func (m *Manager) createEnvironmentScript(version string, envVars map[string]str
 
 // saveActiveVersion saves the currently active version to a state file
 func (m *Manager) saveActiveVersion(version string) error {
-	stateDir := filepath.Join(m.config.InstallDir, "..", "state")
+	// Get safe root directory (parent of InstallDir, e.g., ~/.gopher or ~/gopher)
+	// This avoids path traversal via ".."
+	installDirAbs, err := filepath.Abs(m.config.InstallDir)
+	if err != nil {
+		return fmt.Errorf("failed to resolve install directory: %w", err)
+	}
+	safeRoot := filepath.Dir(installDirAbs) // Parent of versions directory (e.g., ~/.gopher)
+
+	// Validate install directory is within expected structure
+	if err := security.ValidatePath(installDirAbs); err != nil {
+		return fmt.Errorf("invalid install directory: %w", err)
+	}
+
+	// State directory is within safe root (e.g., ~/.gopher/state)
+	stateDir := filepath.Join(safeRoot, "state")
+	stateDirAbs, err := filepath.Abs(stateDir)
+	if err != nil {
+		return fmt.Errorf("failed to resolve state directory: %w", err)
+	}
+
+	// Validate state directory is within safe root to prevent path traversal
+	safeStateDir, err := security.ValidatePathWithinRoot(stateDirAbs, safeRoot)
+	if err != nil {
+		return fmt.Errorf("invalid state directory path: %w", err)
+	}
+
 	// Use 0750 for state directory - private user data
-	if err := os.MkdirAll(stateDir, 0750); err != nil {
+	if err := os.MkdirAll(safeStateDir, 0750); err != nil {
 		return fmt.Errorf("failed to create state directory: %w", err)
 	}
 
-	stateFile := filepath.Join(stateDir, "active-version")
+	stateFile := filepath.Join(safeStateDir, "active-version")
+	// Validate state file is within state directory
+	safeStateFile, err := security.ValidatePathWithinRoot(stateFile, safeStateDir)
+	if err != nil {
+		return fmt.Errorf("invalid state file path: %w", err)
+	}
+
 	content := fmt.Sprintf("active_version=%s\n", version)
 
 	// #nosec G306 -- 0644 acceptable for state file (non-sensitive metadata)
-	if err := os.WriteFile(stateFile, []byte(content), 0644); err != nil {
+	// #nosec G304 -- path validated and scoped to safeStateDir
+	if err := os.WriteFile(safeStateFile, []byte(content), 0644); err != nil {
 		return fmt.Errorf("failed to write state file: %w", err)
 	}
 
@@ -121,10 +155,40 @@ func (m *Manager) saveActiveVersion(version string) error {
 
 // getActiveVersionFromState retrieves the active version from the state file
 func (m *Manager) getActiveVersionFromState() (string, error) {
-	stateFile := filepath.Join(m.config.InstallDir, "..", "state", "active-version")
+	// Get safe root directory (parent of InstallDir, e.g., ~/.gopher or ~/gopher)
+	installDirAbs, err := filepath.Abs(m.config.InstallDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve install directory: %w", err)
+	}
+	safeRoot := filepath.Dir(installDirAbs) // Parent of versions directory (e.g., ~/.gopher)
 
-	// #nosec G304 -- stateFile is constructed from validated config.InstallDir
-	content, err := os.ReadFile(stateFile)
+	// Validate install directory is within expected structure
+	if err := security.ValidatePath(installDirAbs); err != nil {
+		return "", fmt.Errorf("invalid install directory: %w", err)
+	}
+
+	// State directory is within safe root (e.g., ~/.gopher/state)
+	stateDir := filepath.Join(safeRoot, "state")
+	stateDirAbs, err := filepath.Abs(stateDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve state directory: %w", err)
+	}
+
+	// Validate state directory is within safe root to prevent path traversal
+	safeStateDir, err := security.ValidatePathWithinRoot(stateDirAbs, safeRoot)
+	if err != nil {
+		return "", fmt.Errorf("invalid state directory path: %w", err)
+	}
+
+	stateFile := filepath.Join(safeStateDir, "active-version")
+	// Validate state file is within state directory
+	safeStateFile, err := security.ValidatePathWithinRoot(stateFile, safeStateDir)
+	if err != nil {
+		return "", fmt.Errorf("invalid state file path: %w", err)
+	}
+
+	// #nosec G304 -- path validated and scoped to safeStateDir
+	content, err := os.ReadFile(safeStateFile)
 	if err != nil {
 		return "", err
 	}
