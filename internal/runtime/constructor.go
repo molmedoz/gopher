@@ -51,7 +51,21 @@ func NewManager(cfg *config.Config, envProvider env.Provider) *Manager {
 
 // NewAliasManagerWithManager creates a new alias manager with manager reference
 func NewAliasManagerWithManager(config *config.Config, manager *Manager) *AliasManager {
-	aliasesFile := filepath.Join(filepath.Dir(config.InstallDir), "aliases.json")
+	// Get safe root directory (parent of InstallDir, e.g., ~/.gopher or ~/gopher)
+	// This avoids path traversal via parent directory access
+	installDirAbs, err := filepath.Abs(config.InstallDir)
+	if err != nil {
+		// Fallback to simple path join if abs resolution fails
+		aliasesFile := filepath.Join(filepath.Dir(config.InstallDir), "aliases.json")
+		return &AliasManager{
+			config:      config,
+			aliases:     make(map[string]*Alias),
+			aliasesFile: aliasesFile,
+			manager:     manager,
+		}
+	}
+	safeRoot := filepath.Dir(installDirAbs) // Parent of versions directory (e.g., ~/.gopher)
+	aliasesFile := filepath.Join(safeRoot, "aliases.json")
 	return &AliasManager{
 		config:      config,
 		aliases:     make(map[string]*Alias),
@@ -62,7 +76,21 @@ func NewAliasManagerWithManager(config *config.Config, manager *Manager) *AliasM
 
 // NewAliasManager creates a new alias manager (legacy constructor for backward compatibility)
 func NewAliasManager(cfg *config.Config) *AliasManager {
-	aliasesFile := filepath.Join(filepath.Dir(cfg.InstallDir), "aliases.json")
+	// Get safe root directory (parent of InstallDir, e.g., ~/.gopher or ~/gopher)
+	// This avoids path traversal via parent directory access
+	installDirAbs, err := filepath.Abs(cfg.InstallDir)
+	if err != nil {
+		// Fallback to simple path join if abs resolution fails
+		aliasesFile := filepath.Join(filepath.Dir(cfg.InstallDir), "aliases.json")
+		return &AliasManager{
+			config:      cfg,
+			aliases:     make(map[string]*Alias),
+			aliasesFile: aliasesFile,
+			manager:     nil, // Will be set when used with a manager
+		}
+	}
+	safeRoot := filepath.Dir(installDirAbs) // Parent of versions directory (e.g., ~/.gopher)
+	aliasesFile := filepath.Join(safeRoot, "aliases.json")
 	return &AliasManager{
 		config:      cfg,
 		aliases:     make(map[string]*Alias),

@@ -25,7 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Fixed all MEDIUM severity findings:
     - G110: Added decompression bomb protection (1GB per-file limits)
     - G204: Secured subprocess execution with `runGoCommand` helper
-    - G304: Added path validation for file operations
+    - G304: Added path validation and root scoping for file operations
+      - Config files scoped to `~/.gopher` (Unix) or `~/gopher` (Windows)
+      - State files scoped to `~/.gopher/state` (prevents path traversal)
+      - Alias files scoped to `~/.gopher` (parent of install directory)
+      - Metadata files scoped to install directory
+      - Removed `..` path traversal patterns
     - G301/G306: Reviewed and justified file/directory permissions
   - Fixed all LOW severity findings (G104: Handled all unhandled errors)
   - Added security validation helpers in `internal/security/`

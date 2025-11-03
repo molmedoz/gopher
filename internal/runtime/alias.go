@@ -19,8 +19,30 @@ import (
 
 // loadAliasesOnce is the internal function that loads aliases exactly once
 func (am *AliasManager) loadAliasesOnce() {
+	// Validate aliases file path is within safe root
+	aliasesFileAbs, err := filepath.Abs(am.aliasesFile)
+	if err != nil {
+		am.loadErr = fmt.Errorf("failed to resolve aliases file path: %w", err)
+		return
+	}
+
+	// Get safe root directory (parent of InstallDir, e.g., ~/.gopher or ~/gopher)
+	installDirAbs, err := filepath.Abs(am.config.InstallDir)
+	if err != nil {
+		am.loadErr = fmt.Errorf("failed to resolve install directory: %w", err)
+		return
+	}
+	safeRoot := filepath.Dir(installDirAbs) // Parent of versions directory (e.g., ~/.gopher)
+
+	// Validate aliases file is within safe root to prevent path traversal
+	safeAliasesFile, err := security.ValidatePathWithinRoot(aliasesFileAbs, safeRoot)
+	if err != nil {
+		am.loadErr = fmt.Errorf("invalid aliases file path: %w", err)
+		return
+	}
+
 	// Check if aliases file exists
-	if _, err := os.Stat(am.aliasesFile); os.IsNotExist(err) {
+	if _, err := os.Stat(safeAliasesFile); os.IsNotExist(err) {
 		// File doesn't exist, create empty aliases map
 		am.mu.Lock()
 		am.aliases = make(map[string]*Alias)
@@ -29,7 +51,8 @@ func (am *AliasManager) loadAliasesOnce() {
 	}
 
 	// Read aliases file
-	data, err := os.ReadFile(am.aliasesFile)
+	// #nosec G304 -- path validated and scoped to safeRoot
+	data, err := os.ReadFile(safeAliasesFile)
 	if err != nil {
 		am.loadErr = fmt.Errorf("failed to read aliases file: %w", err)
 		return
@@ -58,9 +81,28 @@ func (am *AliasManager) SaveAliases() error {
 	am.mu.RLock()
 	defer am.mu.RUnlock()
 
+	// Validate aliases file path is within safe root
+	aliasesFileAbs, err := filepath.Abs(am.aliasesFile)
+	if err != nil {
+		return fmt.Errorf("failed to resolve aliases file path: %w", err)
+	}
+
+	// Get safe root directory (parent of InstallDir, e.g., ~/.gopher or ~/gopher)
+	installDirAbs, err := filepath.Abs(am.config.InstallDir)
+	if err != nil {
+		return fmt.Errorf("failed to resolve install directory: %w", err)
+	}
+	safeRoot := filepath.Dir(installDirAbs) // Parent of versions directory (e.g., ~/.gopher)
+
+	// Validate aliases file is within safe root to prevent path traversal
+	safeAliasesFile, err := security.ValidatePathWithinRoot(aliasesFileAbs, safeRoot)
+	if err != nil {
+		return fmt.Errorf("invalid aliases file path: %w", err)
+	}
+
 	// Ensure directory exists
 	// Use 0750 for aliases directory - private user data
-	dir := filepath.Dir(am.aliasesFile)
+	dir := filepath.Dir(safeAliasesFile)
 	if err := os.MkdirAll(dir, 0750); err != nil {
 		return fmt.Errorf("failed to create aliases directory: %w", err)
 	}
@@ -73,7 +115,8 @@ func (am *AliasManager) SaveAliases() error {
 
 	// Write to file
 	// #nosec G306 -- 0644 acceptable for aliases file (user-managed aliases)
-	if err := os.WriteFile(am.aliasesFile, data, 0644); err != nil {
+	// #nosec G304 -- path validated and scoped to safeRoot
+	if err := os.WriteFile(safeAliasesFile, data, 0644); err != nil {
 		return fmt.Errorf("failed to write aliases file: %w", err)
 	}
 
