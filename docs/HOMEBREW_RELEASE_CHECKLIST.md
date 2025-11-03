@@ -1,4 +1,4 @@
-# 🍺 Homebrew Release Checklist
+<!-- # 🍺 Homebrew Release Checklist -->
 
 Use this checklist to verify everything is set up correctly for Homebrew releases.
 
