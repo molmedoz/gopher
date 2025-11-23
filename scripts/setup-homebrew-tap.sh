@@ -28,8 +28,8 @@ echo "2. Checking if Formula directory exists..."
 if curl -s "https://api.github.com/repos/${TAP_REPO}/contents/Formula" > /dev/null 2>&1; then
     echo "✅ Formula directory already exists!"
     echo "   You can skip the rest of this script."
-    exit 0
-fi
+        exit 0
+    fi
 echo "⚠️  Formula directory is missing - creating it now..."
 
 # Clone repository

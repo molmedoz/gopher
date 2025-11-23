@@ -56,7 +56,7 @@ func NewAliasManagerWithManager(config *config.Config, manager *Manager) *AliasM
 	installDirAbs, err := filepath.Abs(config.InstallDir)
 	if err != nil {
 		// Fallback to simple path join if abs resolution fails
-		aliasesFile := filepath.Join(filepath.Dir(config.InstallDir), "aliases.json")
+	aliasesFile := filepath.Join(filepath.Dir(config.InstallDir), "aliases.json")
 		return &AliasManager{
 			config:      config,
 			aliases:     make(map[string]*Alias),
@@ -81,7 +81,7 @@ func NewAliasManager(cfg *config.Config) *AliasManager {
 	installDirAbs, err := filepath.Abs(cfg.InstallDir)
 	if err != nil {
 		// Fallback to simple path join if abs resolution fails
-		aliasesFile := filepath.Join(filepath.Dir(cfg.InstallDir), "aliases.json")
+	aliasesFile := filepath.Join(filepath.Dir(cfg.InstallDir), "aliases.json")
 		return &AliasManager{
 			config:      cfg,
 			aliases:     make(map[string]*Alias),
