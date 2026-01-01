@@ -43,7 +43,7 @@ jobs:
       deploy_scoop: ${{ steps.parse.outputs.deploy_scoop }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -111,7 +111,7 @@ jobs:
     if: needs.validate-tag.outputs.deploy_github == 'true'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ needs.validate-tag.outputs.tag }}
@@ -156,7 +156,7 @@ jobs:
     if: needs.validate-tag.outputs.deploy_homebrew == 'true'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ needs.validate-tag.outputs.tag }}
@@ -220,7 +220,7 @@ jobs:
     if: needs.validate-tag.outputs.deploy_chocolatey == 'true'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ needs.validate-tag.outputs.tag }}
@@ -282,7 +282,7 @@ jobs:
     if: needs.validate-tag.outputs.deploy_scoop == 'true'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ needs.validate-tag.outputs.tag }}
