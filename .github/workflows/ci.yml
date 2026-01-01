@@ -100,7 +100,7 @@ jobs:
           fail_ci_if_error: false
 
       - name: Upload coverage HTML report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-report-${{ github.sha }}
           path: coverage.html
@@ -202,7 +202,7 @@ jobs:
             -o gopher-windows-amd64.exe ./cmd/gopher
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: gopher-binaries
           path: |
